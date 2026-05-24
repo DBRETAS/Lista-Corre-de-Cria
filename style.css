@@ -600,13 +600,6 @@ a {
     color: var(--text-primary);
 }
 
-.runner-cpf {
-    font-family: var(--font-body);
-    font-size: 11px;
-    color: var(--text-muted);
-    letter-spacing: 0.5px;
-}
-
 .runner-badge-age {
     background-color: var(--accent-grey);
     border: 1px solid var(--border-color);
@@ -1398,7 +1391,8 @@ a {
 .card-mixpremium,
 .card-unimed,
 .card-mdmodas,
-.card-v6 {
+.card-v6,
+.card-brasileirissimo {
     background-color: #0c0c0c;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-md);
@@ -1415,7 +1409,8 @@ a {
 .card-mixpremium:hover,
 .card-unimed:hover,
 .card-mdmodas:hover,
-.card-v6:hover {
+.card-v6:hover,
+.card-brasileirissimo:hover {
     border-color: var(--border-hover);
     background-color: #121212;
 }
@@ -1425,7 +1420,8 @@ a {
 .card-mixpremium img,
 .card-unimed img,
 .card-mdmodas img,
-.card-v6 img {
+.card-v6 img,
+.card-brasileirissimo img {
     width: 100%;
     height: 100%;
     object-fit: contain;
@@ -1438,6 +1434,96 @@ a {
 .card-mixpremium:hover img,
 .card-unimed:hover img,
 .card-mdmodas:hover img,
-.card-v6:hover img {
+.card-v6:hover img,
+.card-brasileirissimo:hover img {
     opacity: 1;
+}
+
+.footer-credits {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 32px 24px 0;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+}
+
+.footer-credits p {
+    font-size: 12px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    margin: 0;
+}
+
+.footer-credits a {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 22px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.4px;
+    background-color: var(--bg-card);
+    transition: var(--transition-smooth);
+}
+
+.footer-whatsapp {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 22px;
+    border: 1px solid #1a3d2b;
+    border-radius: var(--border-radius-md);
+    color: #4ade80;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.4px;
+    background-color: #0a1f12;
+    transition: var(--transition-smooth);
+}
+
+.footer-whatsapp:hover {
+    border-color: #25d366;
+    background-color: #0f2b1a;
+    transform: translateY(-2px);
+}
+
+.footer-credits a:hover {
+    border-color: var(--border-hover);
+    background-color: var(--bg-card-hover);
+    transform: translateY(-2px);
+}
+
+.footer-credits .credits-copy {
+    font-size: 11px;
+    color: #3a3a3a;
+    font-family: var(--font-body);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    margin-top: 4px;
+}
+
+.admin-tel-link {
+    color: #4ade80;
+    text-decoration: none;
+    font-family: monospace;
+    letter-spacing: 0.3px;
+    transition: var(--transition-fast);
+}
+
+.admin-tel-link:hover {
+    color: #86efac;
+    text-decoration: underline;
 }

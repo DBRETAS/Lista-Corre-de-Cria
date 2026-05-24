@@ -1,10 +1,3 @@
-/**
- * CORRE DE CRIA - Lógica da Aplicação Web
- * Autor: Antigravity AI
- * Descrição: Controle de presença, validações (CPF/Idade/Nome), LocalStorage,
- *            Painel de Organizadores, Contagem regressiva e exportação PDF.
- */
-
 document.addEventListener('DOMContentLoaded', () => {
 
     // ==========================================================================
@@ -12,49 +5,41 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
     let participantes = [];
     let isAdminUnlocked = false;
-    let isDevMode = false; // Define se o acesso atual é de desenvolvedor master
+    let isDevMode = false;
 
-    // Chaves de Armazenamento LocalStorage
     const STORAGE_KEY = 'corre_de_cria_participantes';
     const KEY_ORGANIZER_PASS = 'corre_de_cria_organizer_password';
     const KEY_PERM_CLEAR = 'corre_de_cria_perm_clear';
     const KEY_PERM_EXPORT = 'corre_de_cria_perm_export';
 
-    // Senha do Desenvolvedor (Master)
     const DEV_MASTER_PASSWORD = '-Cepacol2026';
 
-    // Valores padrão de permissões (carregados dinamicamente)
     let organizerPassword = localStorage.getItem(KEY_ORGANIZER_PASS) || 'Caradebode2026-';
-    let permClearEnabled = localStorage.getItem(KEY_PERM_CLEAR) !== 'false'; // Padrão: true
-    let permExportEnabled = localStorage.getItem(KEY_PERM_EXPORT) !== 'false'; // Padrão: true
+    let permClearEnabled = localStorage.getItem(KEY_PERM_CLEAR) !== 'false';
+    let permExportEnabled = localStorage.getItem(KEY_PERM_EXPORT) !== 'false';
 
     // ==========================================================================
     // 2. SELETORES DOM
     // ==========================================================================
-    
-    // Formulário e Inputs
+
     const formPresenca = document.getElementById('form-presenca');
     const inputNome = document.getElementById('input-nome');
-    const inputCpf = document.getElementById('input-cpf');
+    const inputTelefone = document.getElementById('input-telefone');
     const inputIdade = document.getElementById('input-idade');
-    
-    // Elementos de Erro
+
     const errorNome = document.getElementById('error-nome');
-    const errorCpf = document.getElementById('error-cpf');
+    const errorTelefone = document.getElementById('error-telefone');
     const errorIdade = document.getElementById('error-idade');
 
-    // Listas Públicas
     const publicTotalCount = document.getElementById('public-total-count');
     const searchInput = document.getElementById('search-input');
     const publicListGrid = document.getElementById('public-list-grid');
     const publicEmptyMessage = document.getElementById('public-empty-message');
 
-    // Cabeçalho e Painel Admin
     const btnToggleAdmin = document.getElementById('btn-toggle-admin');
     const adminPanel = document.getElementById('admin-panel');
     const btnCloseAdmin = document.getElementById('btn-close-admin');
 
-    // Modal de Autenticação Admin
     const adminAuthModal = document.getElementById('admin-auth-modal');
     const inputAdminPassword = document.getElementById('input-admin-password');
     const errorAdminPassword = document.getElementById('error-admin-password');
@@ -62,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAuthConfirm = document.getElementById('btn-auth-confirm');
     const btnCloseModal = document.getElementById('btn-close-modal');
 
-    // Estatísticas Admin
     const adminStatTotal = document.getElementById('admin-stat-total');
     const adminStatAvgAge = document.getElementById('admin-stat-avg-age');
     const barSub18 = document.getElementById('bar-sub18');
@@ -74,23 +58,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const countCriaAdulto = document.getElementById('count-cria-adulto');
     const countCriaMaster = document.getElementById('count-cria-master');
 
-    // Ações Admin & Tabela
     const btnDownloadPdf = document.getElementById('btn-download-pdf');
     const btnClearAll = document.getElementById('btn-clear-all');
     const adminTableBody = document.getElementById('admin-table-body');
     const adminEmptyMessage = document.getElementById('admin-empty-message');
 
-    // Elementos da Máscara de Impressão (PDF)
     const printDateToday = document.getElementById('print-date-today');
     const printTotalCount = document.getElementById('print-total-count');
     const printTableBody = document.getElementById('print-table-body');
     const printDateGenerated = document.getElementById('print-date-generated');
 
-    // Toast de Notificação
     const toastNotification = document.getElementById('toast-notification');
     const toastMessage = document.getElementById('toast-message');
 
-    // Painel do Desenvolvedor (Modo Dev)
     const devSettingsBox = document.getElementById('dev-settings-box');
     const devPermClear = document.getElementById('dev-perm-clear');
     const devPermExport = document.getElementById('dev-perm-export');
@@ -98,19 +78,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSaveDevSettings = document.getElementById('btn-save-dev-settings');
 
     // ==========================================================================
-    // 3. PERSISTÊNCIA DE DADOS (LOCAL STORAGE)
+    // 3. PERSISTÊNCIA DE DADOS
     // ==========================================================================
 
-    /**
-     * Carrega a lista de participantes do localStorage
-     */
     function carregarParticipantes() {
         const dados = localStorage.getItem(STORAGE_KEY);
         if (dados) {
             try {
                 participantes = JSON.parse(dados);
             } catch (e) {
-                console.error("Erro ao ler dados do LocalStorage, reiniciando lista.");
                 participantes = [];
             }
         } else {
@@ -118,94 +94,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Salva a lista de participantes no localStorage
-     */
     function salvarParticipantes() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(participantes));
         atualizarInterface();
     }
 
     // ==========================================================================
-    // 4. MÁSCARAS & VALIDAÇÕES DE FORMULÁRIO (CPF/IDADE/NOME)
+    // 4. MÁSCARAS & VALIDAÇÕES
     // ==========================================================================
 
     /**
-     * Aplica máscara de CPF em tempo real (Formato: 000.000.000-00)
+     * Máscara de telefone em tempo real: (00) 00000-0000
      */
-    inputCpf.addEventListener('input', (e) => {
-        let value = e.target.value.replace(/\D/g, ""); // Remove não dígitos
-        
+    inputTelefone.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/\D/g, '');
         if (value.length > 11) value = value.substring(0, 11);
-        
-        // Aplica a máscara passo a passo
-        if (value.length > 9) {
-            value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2})$/, "$1.$2.$3-$4");
-        } else if (value.length > 6) {
-            value = value.replace(/^(\d{3})(\d{3})(\d{1,3})$/, "$1.$2.$3");
-        } else if (value.length > 3) {
-            value = value.replace(/^(\d{3})(\d{1,3})$/, "$1.$2");
+
+        if (value.length > 7) {
+            value = value.replace(/^(\d{2})(\d{5})(\d{1,4})$/, '($1) $2-$3');
+        } else if (value.length > 2) {
+            value = value.replace(/^(\d{2})(\d{1,5})$/, '($1) $2');
+        } else if (value.length > 0) {
+            value = value.replace(/^(\d{1,2})$/, '($1');
         }
-        
+
         e.target.value = value;
     });
 
     /**
-     * Validador oficial de CPF (Algoritmo do Ministério da Fazenda)
+     * Valida telefone brasileiro (10 ou 11 dígitos)
      */
-    function validarCPF(cpf) {
-        // Limpa formatação
-        const cpfLimpo = cpf.replace(/\D/g, "");
-
-        if (cpfLimpo.length !== 11) return false;
-
-        // Elimina CPFs conhecidos inválidos
-        if (/^(\d)\1{10}$/.test(cpfLimpo)) return false;
-
-        // Valida primeiro dígito verificador
-        let soma = 0;
-        let resto;
-        for (let i = 1; i <= 9; i++) {
-            soma += parseInt(cpfLimpo.substring(i - 1, i)) * (11 - i);
-        }
-        resto = (soma * 10) % 11;
-        if (resto === 10 || resto === 11) resto = 0;
-        if (resto !== parseInt(cpfLimpo.substring(9, 10))) return false;
-
-        // Valida segundo dígito verificador
-        soma = 0;
-        for (let i = 1; i <= 10; i++) {
-            soma += parseInt(cpfLimpo.substring(i - 1, i)) * (12 - i);
-        }
-        resto = (soma * 10) % 11;
-        if (resto === 10 || resto === 11) resto = 0;
-        if (resto !== parseInt(cpfLimpo.substring(10, 11))) return false;
-
-        return true;
+    function validarTelefone(tel) {
+        const digits = tel.replace(/\D/g, '');
+        return digits.length === 10 || digits.length === 11;
     }
 
     /**
-     * Valida o Nome Completo (Pelo menos nome e sobrenome, com no mínimo 2 letras cada)
+     * Mascara o telefone para exibição pública: (24) *****-4120
      */
+    function mascararTelefone(tel) {
+        const d = tel.replace(/\D/g, '');
+        if (d.length === 11) {
+            return `(${d.substring(0, 2)}) *****-${d.substring(7)}`;
+        }
+        if (d.length === 10) {
+            return `(${d.substring(0, 2)}) ****-${d.substring(6)}`;
+        }
+        return tel;
+    }
+
     function validarNome(nome) {
         const partes = nome.trim().split(/\s+/);
         if (partes.length < 2) return false;
-        
-        // Garante que cada parte tenha pelo menos 2 caracteres
         return partes.every(parte => parte.length >= 2);
     }
 
-    /**
-     * Valida a Idade (Deve estar na faixa entre 5 e 100 anos)
-     */
     function validarIdade(idade) {
         const numIdade = parseInt(idade, 10);
         return !isNaN(numIdade) && numIdade >= 5 && numIdade <= 100;
     }
 
-    /**
-     * Classifica a idade em Faixas Etárias oficiais do Corre
-     */
     function classificarFaixaEtaria(idade) {
         const numIdade = parseInt(idade, 10);
         if (numIdade < 18) return 'Cria Sub-18 (Mirim)';
@@ -214,30 +162,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'Cria 46+ (Master)';
     }
 
-    /**
-     * Mascara o CPF para exibição pública segura (ex: 123.***.***-45)
-     */
-    function mascararCPF(cpf) {
-        const cpfLimpo = cpf.replace(/\D/g, "");
-        if (cpfLimpo.length !== 11) return cpf;
-        return `${cpfLimpo.substring(0, 3)}.***.***-${cpfLimpo.substring(9, 11)}`;
-    }
-
     // ==========================================================================
-    // 5. SUBMISSÃO DE INSCRIÇÃO
+    // 5. SUBMISSÃO
     // ==========================================================================
 
     formPresenca.addEventListener('submit', (e) => {
         e.preventDefault();
 
-        // Valores
         const nomeVal = inputNome.value.trim();
-        const cpfVal = inputCpf.value.trim();
+        const telVal = inputTelefone.value.trim();
         const idadeVal = inputIdade.value.trim();
 
         let isValido = true;
 
-        // 1. Validação de Nome
         if (!validarNome(nomeVal)) {
             inputNome.parentElement.parentElement.classList.add('invalid');
             isValido = false;
@@ -245,24 +182,23 @@ document.addEventListener('DOMContentLoaded', () => {
             inputNome.parentElement.parentElement.classList.remove('invalid');
         }
 
-        // 2. Validação de CPF
-        if (!validarCPF(cpfVal)) {
-            errorCpf.textContent = "Insira um CPF válido no formato 000.000.000-00.";
-            inputCpf.parentElement.parentElement.classList.add('invalid');
+        if (!validarTelefone(telVal)) {
+            errorTelefone.textContent = 'Insira um número válido no formato (00) 00000-0000.';
+            inputTelefone.parentElement.parentElement.classList.add('invalid');
             isValido = false;
         } else {
-            // Verificar se o CPF já está na lista
-            const cpfExistente = participantes.some(p => p.cpf.replace(/\D/g, "") === cpfVal.replace(/\D/g, ""));
-            if (cpfExistente) {
-                errorCpf.textContent = "Este CPF já confirmou presença para o corre!";
-                inputCpf.parentElement.parentElement.classList.add('invalid');
+            // Verifica duplicata pelo número limpo
+            const telLimpo = telVal.replace(/\D/g, '');
+            const telExistente = participantes.some(p => p.telefone.replace(/\D/g, '') === telLimpo);
+            if (telExistente) {
+                errorTelefone.textContent = 'Este número já confirmou presença para o corre!';
+                inputTelefone.parentElement.parentElement.classList.add('invalid');
                 isValido = false;
             } else {
-                inputCpf.parentElement.parentElement.classList.remove('invalid');
+                inputTelefone.parentElement.parentElement.classList.remove('invalid');
             }
         }
 
-        // 3. Validação de Idade
         if (!validarIdade(idadeVal)) {
             inputIdade.parentElement.parentElement.classList.add('invalid');
             isValido = false;
@@ -270,12 +206,11 @@ document.addEventListener('DOMContentLoaded', () => {
             inputIdade.parentElement.parentElement.classList.remove('invalid');
         }
 
-        // Caso formulário seja válido, prossegue com o cadastro
         if (isValido) {
             const novoParticipante = {
                 id: 'cria_' + Date.now(),
                 nome: formatarCapitalize(nomeVal),
-                cpf: cpfVal,
+                telefone: telVal,
                 idade: parseInt(idadeVal, 10),
                 faixaEtaria: classificarFaixaEtaria(idadeVal),
                 dataCadastro: new Date().toISOString()
@@ -283,110 +218,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
             participantes.push(novoParticipante);
             salvarParticipantes();
-            
-            // Sucesso
-            exibirToast(`Presença confirmada no Corre! Corre de Cria ⚡`);
+            exibirToast('Presença confirmada no Corre! Corre de Cria ⚡');
             formPresenca.reset();
-            
-            // Remove classes invalid
             document.querySelectorAll('.input-group').forEach(el => el.classList.remove('invalid'));
         }
     });
 
-    /**
-     * Capitaliza cada palavra do nome do corredor para ficar elegante
-     */
     function formatarCapitalize(str) {
         return str.toLowerCase().replace(/(^\w{1})|(\s+\w{1})/g, letter => letter.toUpperCase());
     }
 
-    // Limpar erros de input ao digitar
     inputNome.addEventListener('input', () => inputNome.parentElement.parentElement.classList.remove('invalid'));
-    inputCpf.addEventListener('input', () => inputCpf.parentElement.parentElement.classList.remove('invalid'));
+    inputTelefone.addEventListener('input', () => inputTelefone.parentElement.parentElement.classList.remove('invalid'));
     inputIdade.addEventListener('input', () => inputIdade.parentElement.parentElement.classList.remove('invalid'));
 
     // ==========================================================================
     // 6. RENDERIZAÇÃO DA INTERFACE & PESQUISA
     // ==========================================================================
 
-    /**
-     * Atualiza todas as exibições da interface
-     */
     function atualizarInterface() {
         const busca = searchInput.value.toLowerCase().trim();
-        
-        // 1. Filtrar lista pública
         const participantesFiltrados = participantes.filter(p => p.nome.toLowerCase().includes(busca));
-        
-        // Renderizar Lista Pública
         renderizarListaPublica(participantesFiltrados);
-        
-        // Atualizar Totais Públicos
         publicTotalCount.textContent = participantes.length;
-
-        // Se o admin estiver ativo, renderizar os dados administrativos
-        if (isAdminUnlocked) {
-            renderizarPainelAdmin();
-        }
+        if (isAdminUnlocked) renderizarPainelAdmin();
     }
 
     /**
-     * Renderiza o Grid de Cards Públicos
+     * Lista pública: exibe nome e faixa etária apenas — telefone NUNCA aparece aqui
      */
     function renderizarListaPublica(lista) {
         publicListGrid.innerHTML = '';
-        
+
         if (lista.length === 0) {
             publicEmptyMessage.classList.remove('hidden');
             return;
         }
-        
+
         publicEmptyMessage.classList.add('hidden');
-        
+
         lista.forEach(p => {
             const card = document.createElement('div');
             card.className = 'runner-card-pub';
-            
-            // Pegar apenas iniciais da faixa etária para ser compacto no badge público
+
             const badgeCompacto = p.faixaEtaria.split(' ')[1] || p.faixaEtaria;
 
             card.innerHTML = `
                 <div class="runner-info-left">
                     <span class="runner-name">${p.nome}</span>
-                    <span class="runner-cpf">CPF: ${mascararCPF(p.cpf)}</span>
                 </div>
                 <span class="runner-badge-age">${badgeCompacto}</span>
             `;
-            
+
             publicListGrid.appendChild(card);
         });
     }
 
-    // Monitor do campo de busca pública
-    searchInput.addEventListener('input', () => {
-        atualizarInterface();
-    });
+    searchInput.addEventListener('input', () => atualizarInterface());
 
     // ==========================================================================
-    // 7. AUTENTICAÇÃO E ÁREA ADMINISTRATIVA
+    // 7. AUTENTICAÇÃO ADMIN
     // ==========================================================================
 
-    /**
-     * Abre a autenticação admin ou fecha o painel
-     */
     btnToggleAdmin.addEventListener('click', () => {
         if (isAdminUnlocked) {
-            // Se já está aberto, fecha o painel admin
             fecharAreaAdmin();
         } else {
-            // Abre o modal de autenticação
             abrirModalSenha();
         }
     });
 
-    btnCloseAdmin.addEventListener('click', () => {
-        fecharAreaAdmin();
-    });
+    btnCloseAdmin.addEventListener('click', () => fecharAreaAdmin());
 
     function abrirModalSenha() {
         adminAuthModal.classList.remove('hidden');
@@ -401,10 +303,8 @@ document.addEventListener('DOMContentLoaded', () => {
         errorAdminPassword.classList.add('hidden');
     }
 
-    // Eventos do modal de senha
     btnAuthCancel.addEventListener('click', fecharModalSenha);
     btnCloseModal.addEventListener('click', fecharModalSenha);
-
     btnAuthConfirm.addEventListener('click', processarAutenticacao);
     inputAdminPassword.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') processarAutenticacao();
@@ -412,8 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function processarAutenticacao() {
         const senhaDigitada = inputAdminPassword.value;
-        
-        // 1. Caso o login seja feito pelo DEV MASTER (-Cepacol2026)
+
         if (senhaDigitada === DEV_MASTER_PASSWORD) {
             isAdminUnlocked = true;
             isDevMode = true;
@@ -427,20 +326,15 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             btnToggleAdmin.classList.remove('btn-secondary-outline');
             btnToggleAdmin.classList.add('btn-primary');
-            
             adminPanel.classList.remove('hidden');
-            devSettingsBox.classList.remove('hidden'); // Exibe a caixa de permissões de dev
-            
-            // Popula os inputs do painel de dev
+            devSettingsBox.classList.remove('hidden');
             devPermClear.checked = permClearEnabled;
             devPermExport.checked = permExportEnabled;
             devOrganizerPassInput.value = organizerPassword;
-            
             adminPanel.scrollIntoView({ behavior: 'smooth' });
             renderizarPainelAdmin();
-            exibirToast("Acesso de DESENVOLVEDOR MASTER liberado! 🛠️⚡");
-            
-        // 2. Caso o login seja feito pelo Organizador comum (Senha dinâmica)
+            exibirToast('Acesso de DESENVOLVEDOR MASTER liberado! 🛠️⚡');
+
         } else if (senhaDigitada === organizerPassword) {
             isAdminUnlocked = true;
             isDevMode = false;
@@ -454,20 +348,18 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             btnToggleAdmin.classList.remove('btn-secondary-outline');
             btnToggleAdmin.classList.add('btn-primary');
-            
             adminPanel.classList.remove('hidden');
-            devSettingsBox.classList.add('hidden'); // Esconde a caixa de dev para organizador comum
-            
+            devSettingsBox.classList.add('hidden');
             adminPanel.scrollIntoView({ behavior: 'smooth' });
             renderizarPainelAdmin();
-            exibirToast("Painel de Organizadores liberado! 🔒🔑");
+            exibirToast('Painel de Organizadores liberado! 🔒🔑');
+
         } else {
             errorAdminPassword.classList.remove('hidden');
             inputAdminPassword.parentElement.classList.add('invalid');
         }
     }
 
-    // Remove erro ao digitar senha
     inputAdminPassword.addEventListener('input', () => {
         errorAdminPassword.classList.add('hidden');
         inputAdminPassword.parentElement.classList.remove('invalid');
@@ -490,14 +382,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================================================
-    // 8. CÁLCULO E EXIBIÇÃO DE ESTATÍSTICAS DO PAINEL ADMIN
+    // 8. PAINEL ADMIN — ESTATÍSTICAS E TABELA
     // ==========================================================================
 
     function renderizarPainelAdmin() {
-        // 1. Totais
         adminStatTotal.textContent = participantes.length;
 
-        // 2. Média de Idade
         if (participantes.length === 0) {
             adminStatAvgAge.textContent = '0';
         } else {
@@ -505,41 +395,31 @@ document.addEventListener('DOMContentLoaded', () => {
             adminStatAvgAge.textContent = (somaIdades / participantes.length).toFixed(1);
         }
 
-        // 3. Faixas Etárias
-        let sub18 = 0;
-        let criaAtivo = 0;
-        let criaAdulto = 0;
-        let criaMaster = 0;
-
+        let sub18 = 0, criaAtivo = 0, criaAdulto = 0, criaMaster = 0;
         participantes.forEach(p => {
             if (p.idade < 18) sub18++;
-            else if (p.idade >= 18 && p.idade <= 29) criaAtivo++;
-            else if (p.idade >= 30 && p.idade <= 45) criaAdulto++;
+            else if (p.idade <= 29) criaAtivo++;
+            else if (p.idade <= 45) criaAdulto++;
             else criaMaster++;
         });
 
-        // Contadores textuais
         countSub18.textContent = sub18;
         countCriaAtivo.textContent = criaAtivo;
         countCriaAdulto.textContent = criaAdulto;
         countCriaMaster.textContent = criaMaster;
 
-        // Barras percentuais
         const total = participantes.length || 1;
         barSub18.style.width = `${(sub18 / total) * 100}%`;
         barCriaAtivo.style.width = `${(criaAtivo / total) * 100}%`;
         barCriaAdulto.style.width = `${(criaAdulto / total) * 100}%`;
         barCriaMaster.style.width = `${(criaMaster / total) * 100}%`;
 
-        // 4. Aplicar Permissões Definidas pelo Dev Master para Organizadores
         if (isDevMode) {
-            // Desenvolvedor Master tem acesso total e irrestrito
             btnDownloadPdf.disabled = false;
             btnDownloadPdf.querySelector('span').textContent = 'BAIXAR RELATÓRIO PDF';
             btnClearAll.disabled = false;
             btnClearAll.querySelector('span').textContent = 'LIMPAR LISTA SEMANAL';
         } else {
-            // Organizador comum - aplica as permissões definidas pelo Dev
             if (permExportEnabled) {
                 btnDownloadPdf.disabled = false;
                 btnDownloadPdf.querySelector('span').textContent = 'BAIXAR RELATÓRIO PDF';
@@ -547,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnDownloadPdf.disabled = true;
                 btnDownloadPdf.querySelector('span').textContent = 'BAIXAR PDF (BLOQUEADO PELO DEV 🔒)';
             }
-
             if (permClearEnabled) {
                 btnClearAll.disabled = false;
                 btnClearAll.querySelector('span').textContent = 'LIMPAR LISTA SEMANAL';
@@ -557,29 +436,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 5. Renderizar a Tabela Completa
         renderizarTabelaAdmin();
     }
 
     /**
-     * Renderiza as linhas da tabela de participantes
+     * Tabela admin: exibe telefone COMPLETO (visível apenas para autenticados)
      */
     function renderizarTabelaAdmin() {
         adminTableBody.innerHTML = '';
-        
+
         if (participantes.length === 0) {
             adminEmptyMessage.classList.remove('hidden');
             return;
         }
-        
+
         adminEmptyMessage.classList.add('hidden');
 
         participantes.forEach(p => {
             const tr = document.createElement('tr');
-            
             tr.innerHTML = `
                 <td style="font-weight: 600;">${p.nome}</td>
-                <td style="font-family: monospace; letter-spacing: 0.2px;">${p.cpf}</td>
+                <td style="font-family: monospace; letter-spacing: 0.2px;">
+                    <a href="https://wa.me/55${p.telefone.replace(/\D/g, '')}" target="_blank" class="admin-tel-link">
+                        ${p.telefone}
+                    </a>
+                </td>
                 <td>${p.idade} anos</td>
                 <td><span class="runner-badge-age" style="display:inline-block;">${p.faixaEtaria}</span></td>
                 <td style="text-align: center;">
@@ -591,11 +472,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 </td>
             `;
-
             adminTableBody.appendChild(tr);
         });
 
-        // Configura ouvintes de exclusão individual
         document.querySelectorAll('.btn-delete-row').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
@@ -604,79 +483,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * Remove um participante pelo ID (Com dupla confirmação)
-     */
     function removerParticipante(id) {
         const p = participantes.find(part => part.id === id);
         if (!p) return;
-
         const confirmar = confirm(`Deseja mesmo remover "${p.nome}" da lista de presença?`);
         if (confirmar) {
             participantes = participantes.filter(part => part.id !== id);
             salvarParticipantes();
-            exibirToast(`Participante removido com sucesso.`);
+            exibirToast('Participante removido com sucesso.');
         }
     }
 
-    /**
-     * Limpa toda a lista semanal (Com dupla confirmação)
-     */
     btnClearAll.addEventListener('click', () => {
         if (!isDevMode && !permClearEnabled) {
-            alert("⚠️ Esta ação foi desabilitada pelo Desenvolvedor Master!");
+            alert('⚠️ Esta ação foi desabilitada pelo Desenvolvedor Master!');
             return;
         }
-
         if (participantes.length === 0) {
-            alert("A lista já está vazia!");
+            alert('A lista já está vazia!');
             return;
         }
-
-        const conf1 = confirm("⚠️ ATENÇÃO: Você está prestes a apagar TODOS os confirmados da semana. Deseja continuar?");
+        const conf1 = confirm('⚠️ ATENÇÃO: Você está prestes a apagar TODOS os confirmados da semana. Deseja continuar?');
         if (conf1) {
-            const conf2 = confirm("Confirmar limpeza definitiva da lista semanal? (Esta ação não pode ser desfeita)");
+            const conf2 = confirm('Confirmar limpeza definitiva da lista semanal? (Esta ação não pode ser desfeita)');
             if (conf2) {
                 participantes = [];
                 salvarParticipantes();
-                exibirToast("Lista de presença semanal reiniciada com sucesso! ⚡");
+                exibirToast('Lista de presença semanal reiniciada com sucesso! ⚡');
             }
         }
     });
 
     // ==========================================================================
-    // 9. EXPORTAÇÃO E GERAÇÃO DO RELATÓRIO EM PDF (WINDOW.PRINT)
+    // 9. EXPORTAÇÃO PDF
     // ==========================================================================
 
     btnDownloadPdf.addEventListener('click', () => {
         if (!isDevMode && !permExportEnabled) {
-            alert("⚠️ Esta ação foi desabilitada pelo Desenvolvedor Master!");
+            alert('⚠️ Esta ação foi desabilitada pelo Desenvolvedor Master!');
             return;
         }
-
         if (participantes.length === 0) {
-            alert("Nenhum participante confirmado para gerar o relatório PDF!");
+            alert('Nenhum participante confirmado para gerar o relatório PDF!');
             return;
         }
 
-        // 1. Calcular a data do corre da próxima segunda-feira para o PDF
         const dataProximoCorre = calcularDataProximoCorre();
-        const dataFormatadaStr = formatarData(dataProximoCorre);
-        printDateToday.textContent = `Segunda-feira - ${dataFormatadaStr}`;
-
-        // 2. Preencher totais e data de geração
+        printDateToday.textContent = `Segunda-feira - ${formatarData(dataProximoCorre)}`;
         printTotalCount.textContent = participantes.length;
-        printDateGenerated.textContent = new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        printDateGenerated.textContent = new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-        // 3. Popular Tabela Invisível de Impressão
         printTableBody.innerHTML = '';
-        
         participantes.forEach((p, index) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td style="font-weight: bold; width: 40px; text-align: center;">${index + 1}</td>
                 <td style="font-weight: 600; text-transform: uppercase;">${p.nome}</td>
-                <td style="font-family: monospace; font-size: 10px;">${mascararCPF(p.cpf)}</td>
+                <td style="font-family: monospace; font-size: 10px;">${mascararTelefone(p.telefone)}</td>
                 <td style="text-align: center;">${p.idade} anos</td>
                 <td style="font-weight: 500;">${p.faixaEtaria}</td>
                 <td style="border-bottom: 1px solid #000000 !important; width: 220px;"></td>
@@ -684,14 +547,9 @@ document.addEventListener('DOMContentLoaded', () => {
             printTableBody.appendChild(tr);
         });
 
-        // 4. Disparar o fluxo nativo de impressão
-        // O navegador aplicará as diretivas de @media print contidas no style.css
         window.print();
     });
 
-    /**
-     * Auxiliar: Formata data no formato brasileiro (DD/MM/AAAA)
-     */
     function formatarData(date) {
         const dia = String(date.getDate()).padStart(2, '0');
         const mes = String(date.getMonth() + 1).padStart(2, '0');
@@ -699,36 +557,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${dia}/${mes}/${ano}`;
     }
 
-    /**
-     * Calcula o dia e hora do próximo Corre de segunda às 19:40
-     */
     function calcularDataProximoCorre() {
         const agora = new Date();
         const proximaSegunda = new Date();
-        
-        // Determinar quantos dias faltam para a próxima segunda (1)
-        const diaSemana = agora.getDay(); // 0: Dom, 1: Seg, 2: Ter, ...
+        const diaSemana = agora.getDay();
         let diasFaltantes = (1 - diaSemana + 7) % 7;
 
-        // Se hoje for segunda-feira
         if (diasFaltantes === 0) {
             const limiteCorre = new Date();
             limiteCorre.setHours(19, 40, 0, 0);
-            
-            // Se já passou das 19:40, pula para a próxima segunda-feira
-            if (agora.getTime() > limiteCorre.getTime()) {
-                diasFaltantes = 7;
-            }
+            if (agora.getTime() > limiteCorre.getTime()) diasFaltantes = 7;
         }
 
         proximaSegunda.setDate(agora.getDate() + diasFaltantes);
         proximaSegunda.setHours(19, 40, 0, 0);
-        
         return proximaSegunda;
     }
 
     // ==========================================================================
-    // 10. CRONÔMETRO DE CONTAGEM REGRESSIVA EM TEMPO REAL
+    // 10. CONTAGEM REGRESSIVA
     // ==========================================================================
 
     const domCdDays = document.getElementById('cd-days');
@@ -739,11 +586,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function tickCountdown() {
         const agora = new Date().getTime();
         const proximoCorre = calcularDataProximoCorre().getTime();
-        
         const diferenca = proximoCorre - agora;
 
         if (diferenca <= 0) {
-            // Se chegou a hora do corre, reseta o temporizador
             domCdDays.textContent = '00';
             domCdHours.textContent = '00';
             domCdMin.textContent = '00';
@@ -751,66 +596,50 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Conversões matemáticas de tempo
-        const dias = Math.floor(diferenca / (1000 * 60 * 60 * 24));
-        const horas = Math.floor((diferenca % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutos = Math.floor((diferenca % (1000 * 60 * 60)) / (1000 * 60));
-        const segundos = Math.floor((diferenca % (1000 * 60)) / 1000);
-
-        // Preenche com zeros à esquerda
-        domCdDays.textContent = String(dias).padStart(2, '0');
-        domCdHours.textContent = String(horas).padStart(2, '0');
-        domCdMin.textContent = String(minutos).padStart(2, '0');
-        domCdSec.textContent = String(segundos).padStart(2, '0');
+        domCdDays.textContent = String(Math.floor(diferenca / (1000 * 60 * 60 * 24))).padStart(2, '0');
+        domCdHours.textContent = String(Math.floor((diferenca % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
+        domCdMin.textContent = String(Math.floor((diferenca % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+        domCdSec.textContent = String(Math.floor((diferenca % (1000 * 60)) / 1000)).padStart(2, '0');
     }
 
-    // Roda a primeira vez e configura intervalo a cada 1 segundo
     tickCountdown();
     setInterval(tickCountdown, 1000);
 
     // ==========================================================================
-    // 11. TOAST NOTIFICATION UTILITY
+    // 11. TOAST
     // ==========================================================================
-    
+
     let toastTimeout;
-    
     function exibirToast(mensagem) {
         clearTimeout(toastTimeout);
         toastMessage.textContent = mensagem;
         toastNotification.classList.remove('hidden');
-        
-        toastTimeout = setTimeout(() => {
-            toastNotification.classList.add('hidden');
-        }, 4000);
+        toastTimeout = setTimeout(() => toastNotification.classList.add('hidden'), 4000);
     }
 
     // ==========================================================================
-    // 12. LÓGICA DE SALVAMENTO DE CONFIGURAÇÕES DE DEV (MODO DEV)
+    // 12. CONFIGURAÇÕES DEV
     // ==========================================================================
+
     btnSaveDevSettings.addEventListener('click', () => {
         if (!isDevMode) return;
-        
         const novaSenhaOrg = devOrganizerPassInput.value.trim();
         if (novaSenhaOrg.length < 3) {
-            alert("A senha do organizador deve ter pelo menos 3 caracteres!");
+            alert('A senha do organizador deve ter pelo menos 3 caracteres!');
             return;
         }
-
         organizerPassword = novaSenhaOrg;
         permClearEnabled = devPermClear.checked;
         permExportEnabled = devPermExport.checked;
-
-        // Salvar tudo no localStorage
         localStorage.setItem(KEY_ORGANIZER_PASS, organizerPassword);
         localStorage.setItem(KEY_PERM_CLEAR, permClearEnabled);
         localStorage.setItem(KEY_PERM_EXPORT, permExportEnabled);
-
-        exibirToast("Permissões e senha salvas pelo Dev Master! 🛠️💾");
-        renderizarPainelAdmin(); // Recarrega os botões com as novas permissões aplicadas
+        exibirToast('Permissões e senha salvas pelo Dev Master! 🛠️💾');
+        renderizarPainelAdmin();
     });
 
     // ==========================================================================
-    // 13. INICIALIZAÇÃO DA PÁGINA
+    // 13. INICIALIZAÇÃO
     // ==========================================================================
     carregarParticipantes();
     atualizarInterface();
