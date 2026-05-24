@@ -1,52 +1,54 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ⬇️ COLE SUAS CREDENCIAIS AQUI
+const firebaseConfig = {
+  apiKey: "AIzaSyBeYblxeG-YbmFjNBMZKMbgwClYikZnxho",
+  authDomain: "databasecdc-4b420.firebaseapp.com",
+  projectId: "databasecdc-4b420",
+  storageBucket: "databasecdc-4b420.firebasestorage.app",
+  messagingSenderId: "563294958612",
+  appId: "1:563294958612:web:d1a502e936bbe193702301"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const colecao = collection(db, 'participantes');
+
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ==========================================================================
-    // 1. ESTADO GLOBAL DA APLICAÇÃO
-    // ==========================================================================
     let participantes = [];
     let isAdminUnlocked = false;
     let isDevMode = false;
 
-    const STORAGE_KEY = 'corre_de_cria_participantes';
     const KEY_ORGANIZER_PASS = 'corre_de_cria_organizer_password';
     const KEY_PERM_CLEAR = 'corre_de_cria_perm_clear';
     const KEY_PERM_EXPORT = 'corre_de_cria_perm_export';
-
     const DEV_MASTER_PASSWORD = '-Cepacol2026';
 
     let organizerPassword = localStorage.getItem(KEY_ORGANIZER_PASS) || 'Caradebode2026-';
     let permClearEnabled = localStorage.getItem(KEY_PERM_CLEAR) !== 'false';
     let permExportEnabled = localStorage.getItem(KEY_PERM_EXPORT) !== 'false';
 
-    // ==========================================================================
-    // 2. SELETORES DOM
-    // ==========================================================================
-
+    // SELETORES DOM (todos iguais ao seu app.js atual)
     const formPresenca = document.getElementById('form-presenca');
     const inputNome = document.getElementById('input-nome');
     const inputTelefone = document.getElementById('input-telefone');
     const inputIdade = document.getElementById('input-idade');
-
-    const errorNome = document.getElementById('error-nome');
     const errorTelefone = document.getElementById('error-telefone');
-    const errorIdade = document.getElementById('error-idade');
-
     const publicTotalCount = document.getElementById('public-total-count');
     const searchInput = document.getElementById('search-input');
     const publicListGrid = document.getElementById('public-list-grid');
     const publicEmptyMessage = document.getElementById('public-empty-message');
-
     const btnToggleAdmin = document.getElementById('btn-toggle-admin');
     const adminPanel = document.getElementById('admin-panel');
     const btnCloseAdmin = document.getElementById('btn-close-admin');
-
     const adminAuthModal = document.getElementById('admin-auth-modal');
     const inputAdminPassword = document.getElementById('input-admin-password');
     const errorAdminPassword = document.getElementById('error-admin-password');
     const btnAuthCancel = document.getElementById('btn-auth-cancel');
     const btnAuthConfirm = document.getElementById('btn-auth-confirm');
     const btnCloseModal = document.getElementById('btn-close-modal');
-
     const adminStatTotal = document.getElementById('admin-stat-total');
     const adminStatAvgAge = document.getElementById('admin-stat-avg-age');
     const barSub18 = document.getElementById('bar-sub18');
@@ -57,59 +59,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const countCriaAtivo = document.getElementById('count-cria-ativo');
     const countCriaAdulto = document.getElementById('count-cria-adulto');
     const countCriaMaster = document.getElementById('count-cria-master');
-
     const btnDownloadPdf = document.getElementById('btn-download-pdf');
     const btnClearAll = document.getElementById('btn-clear-all');
     const adminTableBody = document.getElementById('admin-table-body');
     const adminEmptyMessage = document.getElementById('admin-empty-message');
-
     const printDateToday = document.getElementById('print-date-today');
     const printTotalCount = document.getElementById('print-total-count');
     const printTableBody = document.getElementById('print-table-body');
     const printDateGenerated = document.getElementById('print-date-generated');
-
     const toastNotification = document.getElementById('toast-notification');
     const toastMessage = document.getElementById('toast-message');
-
     const devSettingsBox = document.getElementById('dev-settings-box');
     const devPermClear = document.getElementById('dev-perm-clear');
     const devPermExport = document.getElementById('dev-perm-export');
     const devOrganizerPassInput = document.getElementById('dev-organizer-pass-input');
     const btnSaveDevSettings = document.getElementById('btn-save-dev-settings');
 
-    // ==========================================================================
-    // 3. PERSISTÊNCIA DE DADOS
-    // ==========================================================================
-
-    function carregarParticipantes() {
-        const dados = localStorage.getItem(STORAGE_KEY);
-        if (dados) {
-            try {
-                participantes = JSON.parse(dados);
-            } catch (e) {
-                participantes = [];
-            }
-        } else {
-            participantes = [];
-        }
-    }
-
-    function salvarParticipantes() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(participantes));
+    // ESCUTA EM TEMPO REAL O FIRESTORE
+    // Qualquer mudança no banco atualiza a lista para TODOS automaticamente
+    const q = query(colecao, orderBy('dataCadastro', 'asc'));
+    onSnapshot(q, (snapshot) => {
+        participantes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         atualizarInterface();
-    }
+    });
 
-    // ==========================================================================
-    // 4. MÁSCARAS & VALIDAÇÕES
-    // ==========================================================================
-
-    /**
-     * Máscara de telefone em tempo real: (00) 00000-0000
-     */
+    // MÁSCARAS & VALIDAÇÕES
     inputTelefone.addEventListener('input', (e) => {
         let value = e.target.value.replace(/\D/g, '');
         if (value.length > 11) value = value.substring(0, 11);
-
         if (value.length > 7) {
             value = value.replace(/^(\d{2})(\d{5})(\d{1,4})$/, '($1) $2-$3');
         } else if (value.length > 2) {
@@ -117,62 +94,50 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (value.length > 0) {
             value = value.replace(/^(\d{1,2})$/, '($1');
         }
-
         e.target.value = value;
     });
 
-    /**
-     * Valida telefone brasileiro (10 ou 11 dígitos)
-     */
     function validarTelefone(tel) {
         const digits = tel.replace(/\D/g, '');
         return digits.length === 10 || digits.length === 11;
     }
 
-    /**
-     * Mascara o telefone para exibição pública: (24) *****-4120
-     */
     function mascararTelefone(tel) {
         const d = tel.replace(/\D/g, '');
-        if (d.length === 11) {
-            return `(${d.substring(0, 2)}) *****-${d.substring(7)}`;
-        }
-        if (d.length === 10) {
-            return `(${d.substring(0, 2)}) ****-${d.substring(6)}`;
-        }
+        if (d.length === 11) return `(${d.substring(0, 2)}) *****-${d.substring(7)}`;
+        if (d.length === 10) return `(${d.substring(0, 2)}) ****-${d.substring(6)}`;
         return tel;
     }
 
     function validarNome(nome) {
         const partes = nome.trim().split(/\s+/);
-        if (partes.length < 2) return false;
-        return partes.every(parte => parte.length >= 2);
+        return partes.length >= 2 && partes.every(p => p.length >= 2);
     }
 
     function validarIdade(idade) {
-        const numIdade = parseInt(idade, 10);
-        return !isNaN(numIdade) && numIdade >= 5 && numIdade <= 100;
+        const n = parseInt(idade, 10);
+        return !isNaN(n) && n >= 5 && n <= 100;
     }
 
     function classificarFaixaEtaria(idade) {
-        const numIdade = parseInt(idade, 10);
-        if (numIdade < 18) return 'Cria Sub-18 (Mirim)';
-        if (numIdade >= 18 && numIdade <= 29) return 'Cria 18-29 (Ativo)';
-        if (numIdade >= 30 && numIdade <= 45) return 'Cria 30-45 (Adulto)';
+        const n = parseInt(idade, 10);
+        if (n < 18) return 'Cria Sub-18 (Mirim)';
+        if (n <= 29) return 'Cria 18-29 (Ativo)';
+        if (n <= 45) return 'Cria 30-45 (Adulto)';
         return 'Cria 46+ (Master)';
     }
 
-    // ==========================================================================
-    // 5. SUBMISSÃO
-    // ==========================================================================
+    function formatarCapitalize(str) {
+        return str.toLowerCase().replace(/(^\w{1})|(\s+\w{1})/g, l => l.toUpperCase());
+    }
 
-    formPresenca.addEventListener('submit', (e) => {
+    // SUBMISSÃO — salva no Firestore em vez do localStorage
+    formPresenca.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const nomeVal = inputNome.value.trim();
         const telVal = inputTelefone.value.trim();
         const idadeVal = inputIdade.value.trim();
-
         let isValido = true;
 
         if (!validarNome(nomeVal)) {
@@ -187,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
             inputTelefone.parentElement.parentElement.classList.add('invalid');
             isValido = false;
         } else {
-            // Verifica duplicata pelo número limpo
             const telLimpo = telVal.replace(/\D/g, '');
             const telExistente = participantes.some(p => p.telefone.replace(/\D/g, '') === telLimpo);
             if (telExistente) {
@@ -207,87 +171,64 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (isValido) {
-            const novoParticipante = {
-                id: 'cria_' + Date.now(),
-                nome: formatarCapitalize(nomeVal),
-                telefone: telVal,
-                idade: parseInt(idadeVal, 10),
-                faixaEtaria: classificarFaixaEtaria(idadeVal),
-                dataCadastro: new Date().toISOString()
-            };
-
-            participantes.push(novoParticipante);
-            salvarParticipantes();
-            exibirToast('Presença confirmada no Corre! Corre de Cria ⚡');
-            formPresenca.reset();
-            document.querySelectorAll('.input-group').forEach(el => el.classList.remove('invalid'));
+            try {
+                await addDoc(colecao, {
+                    nome: formatarCapitalize(nomeVal),
+                    telefone: telVal,
+                    idade: parseInt(idadeVal, 10),
+                    faixaEtaria: classificarFaixaEtaria(idadeVal),
+                    dataCadastro: new Date().toISOString()
+                });
+                exibirToast('Presença confirmada no Corre! Corre de Cria ⚡');
+                formPresenca.reset();
+                document.querySelectorAll('.input-group').forEach(el => el.classList.remove('invalid'));
+            } catch (err) {
+                alert('Erro ao salvar presença: ' + err.message);
+            }
         }
     });
-
-    function formatarCapitalize(str) {
-        return str.toLowerCase().replace(/(^\w{1})|(\s+\w{1})/g, letter => letter.toUpperCase());
-    }
 
     inputNome.addEventListener('input', () => inputNome.parentElement.parentElement.classList.remove('invalid'));
     inputTelefone.addEventListener('input', () => inputTelefone.parentElement.parentElement.classList.remove('invalid'));
     inputIdade.addEventListener('input', () => inputIdade.parentElement.parentElement.classList.remove('invalid'));
 
-    // ==========================================================================
-    // 6. RENDERIZAÇÃO DA INTERFACE & PESQUISA
-    // ==========================================================================
-
+    // RENDERIZAÇÃO
     function atualizarInterface() {
         const busca = searchInput.value.toLowerCase().trim();
-        const participantesFiltrados = participantes.filter(p => p.nome.toLowerCase().includes(busca));
-        renderizarListaPublica(participantesFiltrados);
+        const filtrados = participantes.filter(p => p.nome.toLowerCase().includes(busca));
+        renderizarListaPublica(filtrados);
         publicTotalCount.textContent = participantes.length;
         if (isAdminUnlocked) renderizarPainelAdmin();
     }
 
-    /**
-     * Lista pública: exibe nome e faixa etária apenas — telefone NUNCA aparece aqui
-     */
     function renderizarListaPublica(lista) {
         publicListGrid.innerHTML = '';
-
         if (lista.length === 0) {
             publicEmptyMessage.classList.remove('hidden');
             return;
         }
-
         publicEmptyMessage.classList.add('hidden');
-
         lista.forEach(p => {
             const card = document.createElement('div');
             card.className = 'runner-card-pub';
-
             const badgeCompacto = p.faixaEtaria.split(' ')[1] || p.faixaEtaria;
-
             card.innerHTML = `
                 <div class="runner-info-left">
                     <span class="runner-name">${p.nome}</span>
                 </div>
                 <span class="runner-badge-age">${badgeCompacto}</span>
             `;
-
             publicListGrid.appendChild(card);
         });
     }
 
     searchInput.addEventListener('input', () => atualizarInterface());
 
-    // ==========================================================================
-    // 7. AUTENTICAÇÃO ADMIN
-    // ==========================================================================
-
+    // AUTENTICAÇÃO ADMIN (igual ao anterior)
     btnToggleAdmin.addEventListener('click', () => {
-        if (isAdminUnlocked) {
-            fecharAreaAdmin();
-        } else {
-            abrirModalSenha();
-        }
+        if (isAdminUnlocked) fecharAreaAdmin();
+        else abrirModalSenha();
     });
-
     btnCloseAdmin.addEventListener('click', () => fecharAreaAdmin());
 
     function abrirModalSenha() {
@@ -311,21 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function processarAutenticacao() {
-        const senhaDigitada = inputAdminPassword.value;
-
-        if (senhaDigitada === DEV_MASTER_PASSWORD) {
-            isAdminUnlocked = true;
-            isDevMode = true;
+        const senha = inputAdminPassword.value;
+        if (senha === DEV_MASTER_PASSWORD) {
+            isAdminUnlocked = true; isDevMode = true;
             fecharModalSenha();
-            btnToggleAdmin.innerHTML = `
-                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-                </svg>
-                <span>Dev Master 🛠️</span>
-            `;
-            btnToggleAdmin.classList.remove('btn-secondary-outline');
-            btnToggleAdmin.classList.add('btn-primary');
+            btnToggleAdmin.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg><span>Dev Master 🛠️</span>`;
+            btnToggleAdmin.classList.replace('btn-secondary-outline', 'btn-primary');
             adminPanel.classList.remove('hidden');
             devSettingsBox.classList.remove('hidden');
             devPermClear.checked = permClearEnabled;
@@ -334,26 +266,16 @@ document.addEventListener('DOMContentLoaded', () => {
             adminPanel.scrollIntoView({ behavior: 'smooth' });
             renderizarPainelAdmin();
             exibirToast('Acesso de DESENVOLVEDOR MASTER liberado! 🛠️⚡');
-
-        } else if (senhaDigitada === organizerPassword) {
-            isAdminUnlocked = true;
-            isDevMode = false;
+        } else if (senha === organizerPassword) {
+            isAdminUnlocked = true; isDevMode = false;
             fecharModalSenha();
-            btnToggleAdmin.innerHTML = `
-                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-                </svg>
-                <span>Organizador 🔓</span>
-            `;
-            btnToggleAdmin.classList.remove('btn-secondary-outline');
-            btnToggleAdmin.classList.add('btn-primary');
+            btnToggleAdmin.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg><span>Organizador 🔓</span>`;
+            btnToggleAdmin.classList.replace('btn-secondary-outline', 'btn-primary');
             adminPanel.classList.remove('hidden');
             devSettingsBox.classList.add('hidden');
             adminPanel.scrollIntoView({ behavior: 'smooth' });
             renderizarPainelAdmin();
             exibirToast('Painel de Organizadores liberado! 🔒🔑');
-
         } else {
             errorAdminPassword.classList.remove('hidden');
             inputAdminPassword.parentElement.classList.add('invalid');
@@ -366,33 +288,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function fecharAreaAdmin() {
-        isAdminUnlocked = false;
-        isDevMode = false;
-        btnToggleAdmin.innerHTML = `
-            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-            <span>Organizador 🔒</span>
-        `;
-        btnToggleAdmin.classList.add('btn-secondary-outline');
-        btnToggleAdmin.classList.remove('btn-primary');
+        isAdminUnlocked = false; isDevMode = false;
+        btnToggleAdmin.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span>Organizador 🔒</span>`;
+        btnToggleAdmin.classList.replace('btn-primary', 'btn-secondary-outline');
         adminPanel.classList.add('hidden');
         devSettingsBox.classList.add('hidden');
     }
 
-    // ==========================================================================
-    // 8. PAINEL ADMIN — ESTATÍSTICAS E TABELA
-    // ==========================================================================
-
+    // PAINEL ADMIN
     function renderizarPainelAdmin() {
         adminStatTotal.textContent = participantes.length;
-
         if (participantes.length === 0) {
             adminStatAvgAge.textContent = '0';
         } else {
-            const somaIdades = participantes.reduce((soma, p) => soma + p.idade, 0);
-            adminStatAvgAge.textContent = (somaIdades / participantes.length).toFixed(1);
+            const soma = participantes.reduce((s, p) => s + p.idade, 0);
+            adminStatAvgAge.textContent = (soma / participantes.length).toFixed(1);
         }
 
         let sub18 = 0, criaAtivo = 0, criaAdulto = 0, criaMaster = 0;
@@ -420,47 +330,27 @@ document.addEventListener('DOMContentLoaded', () => {
             btnClearAll.disabled = false;
             btnClearAll.querySelector('span').textContent = 'LIMPAR LISTA SEMANAL';
         } else {
-            if (permExportEnabled) {
-                btnDownloadPdf.disabled = false;
-                btnDownloadPdf.querySelector('span').textContent = 'BAIXAR RELATÓRIO PDF';
-            } else {
-                btnDownloadPdf.disabled = true;
-                btnDownloadPdf.querySelector('span').textContent = 'BAIXAR PDF (BLOQUEADO PELO DEV 🔒)';
-            }
-            if (permClearEnabled) {
-                btnClearAll.disabled = false;
-                btnClearAll.querySelector('span').textContent = 'LIMPAR LISTA SEMANAL';
-            } else {
-                btnClearAll.disabled = true;
-                btnClearAll.querySelector('span').textContent = 'LIMPAR LISTA (BLOQUEADO PELO DEV 🔒)';
-            }
+            btnDownloadPdf.disabled = !permExportEnabled;
+            btnDownloadPdf.querySelector('span').textContent = permExportEnabled ? 'BAIXAR RELATÓRIO PDF' : 'BAIXAR PDF (BLOQUEADO PELO DEV 🔒)';
+            btnClearAll.disabled = !permClearEnabled;
+            btnClearAll.querySelector('span').textContent = permClearEnabled ? 'LIMPAR LISTA SEMANAL' : 'LIMPAR LISTA (BLOQUEADO PELO DEV 🔒)';
         }
 
         renderizarTabelaAdmin();
     }
 
-    /**
-     * Tabela admin: exibe telefone COMPLETO (visível apenas para autenticados)
-     */
     function renderizarTabelaAdmin() {
         adminTableBody.innerHTML = '';
-
         if (participantes.length === 0) {
             adminEmptyMessage.classList.remove('hidden');
             return;
         }
-
         adminEmptyMessage.classList.add('hidden');
-
         participantes.forEach(p => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td style="font-weight: 600;">${p.nome}</td>
-                <td style="font-family: monospace; letter-spacing: 0.2px;">
-                    <a href="https://wa.me/55${p.telefone.replace(/\D/g, '')}" target="_blank" class="admin-tel-link">
-                        ${p.telefone}
-                    </a>
-                </td>
+                <td><a href="https://wa.me/55${p.telefone.replace(/\D/g, '')}" target="_blank" class="admin-tel-link">${p.telefone}</a></td>
                 <td>${p.idade} anos</td>
                 <td><span class="runner-badge-age" style="display:inline-block;">${p.faixaEtaria}</span></td>
                 <td style="text-align: center;">
@@ -476,57 +366,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         document.querySelectorAll('.btn-delete-row').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
-                removerParticipante(id);
+                const p = participantes.find(part => part.id === id);
+                if (!p) return;
+                if (confirm(`Deseja mesmo remover "${p.nome}" da lista?`)) {
+                    await deleteDoc(doc(db, 'participantes', id));
+                    exibirToast('Participante removido com sucesso.');
+                }
             });
         });
     }
 
-    function removerParticipante(id) {
-        const p = participantes.find(part => part.id === id);
-        if (!p) return;
-        const confirmar = confirm(`Deseja mesmo remover "${p.nome}" da lista de presença?`);
-        if (confirmar) {
-            participantes = participantes.filter(part => part.id !== id);
-            salvarParticipantes();
-            exibirToast('Participante removido com sucesso.');
-        }
-    }
-
-    btnClearAll.addEventListener('click', () => {
-        if (!isDevMode && !permClearEnabled) {
-            alert('⚠️ Esta ação foi desabilitada pelo Desenvolvedor Master!');
-            return;
-        }
-        if (participantes.length === 0) {
-            alert('A lista já está vazia!');
-            return;
-        }
-        const conf1 = confirm('⚠️ ATENÇÃO: Você está prestes a apagar TODOS os confirmados da semana. Deseja continuar?');
-        if (conf1) {
-            const conf2 = confirm('Confirmar limpeza definitiva da lista semanal? (Esta ação não pode ser desfeita)');
-            if (conf2) {
-                participantes = [];
-                salvarParticipantes();
-                exibirToast('Lista de presença semanal reiniciada com sucesso! ⚡');
+    // LIMPAR LISTA — deleta todos os documentos do Firestore
+    btnClearAll.addEventListener('click', async () => {
+        if (!isDevMode && !permClearEnabled) { alert('⚠️ Bloqueado pelo Dev!'); return; }
+        if (participantes.length === 0) { alert('A lista já está vazia!'); return; }
+        if (confirm('⚠️ Apagar TODOS os confirmados?')) {
+            if (confirm('Confirmar limpeza definitiva? (Não pode ser desfeita)')) {
+                for (const p of participantes) {
+                    await deleteDoc(doc(db, 'participantes', p.id));
+                }
+                exibirToast('Lista reiniciada com sucesso! ⚡');
             }
         }
     });
 
-    // ==========================================================================
-    // 9. EXPORTAÇÃO PDF
-    // ==========================================================================
-
+    // PDF (igual ao anterior)
     btnDownloadPdf.addEventListener('click', () => {
-        if (!isDevMode && !permExportEnabled) {
-            alert('⚠️ Esta ação foi desabilitada pelo Desenvolvedor Master!');
-            return;
-        }
-        if (participantes.length === 0) {
-            alert('Nenhum participante confirmado para gerar o relatório PDF!');
-            return;
-        }
+        if (!isDevMode && !permExportEnabled) { alert('⚠️ Bloqueado pelo Dev!'); return; }
+        if (participantes.length === 0) { alert('Nenhum participante para gerar PDF!'); return; }
 
         const dataProximoCorre = calcularDataProximoCorre();
         printDateToday.textContent = `Segunda-feira - ${formatarData(dataProximoCorre)}`;
@@ -537,110 +406,74 @@ document.addEventListener('DOMContentLoaded', () => {
         participantes.forEach((p, index) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="font-weight: bold; width: 40px; text-align: center;">${index + 1}</td>
-                <td style="font-weight: 600; text-transform: uppercase;">${p.nome}</td>
-                <td style="font-family: monospace; font-size: 10px;">${mascararTelefone(p.telefone)}</td>
-                <td style="text-align: center;">${p.idade} anos</td>
-                <td style="font-weight: 500;">${p.faixaEtaria}</td>
-                <td style="border-bottom: 1px solid #000000 !important; width: 220px;"></td>
+                <td style="font-weight:bold;width:40px;text-align:center;">${index + 1}</td>
+                <td style="font-weight:600;text-transform:uppercase;">${p.nome}</td>
+                <td style="font-family:monospace;font-size:10px;">${mascararTelefone(p.telefone)}</td>
+                <td style="text-align:center;">${p.idade} anos</td>
+                <td style="font-weight:500;">${p.faixaEtaria}</td>
+                <td style="border-bottom:1px solid #000!important;width:220px;"></td>
             `;
             printTableBody.appendChild(tr);
         });
-
         window.print();
     });
 
     function formatarData(date) {
-        const dia = String(date.getDate()).padStart(2, '0');
-        const mes = String(date.getMonth() + 1).padStart(2, '0');
-        const ano = date.getFullYear();
-        return `${dia}/${mes}/${ano}`;
+        return `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()}`;
     }
 
     function calcularDataProximoCorre() {
         const agora = new Date();
-        const proximaSegunda = new Date();
-        const diaSemana = agora.getDay();
-        let diasFaltantes = (1 - diaSemana + 7) % 7;
-
-        if (diasFaltantes === 0) {
-            const limiteCorre = new Date();
-            limiteCorre.setHours(19, 40, 0, 0);
-            if (agora.getTime() > limiteCorre.getTime()) diasFaltantes = 7;
+        const proxima = new Date();
+        let dias = (1 - agora.getDay() + 7) % 7;
+        if (dias === 0) {
+            const limite = new Date();
+            limite.setHours(19, 40, 0, 0);
+            if (agora > limite) dias = 7;
         }
-
-        proximaSegunda.setDate(agora.getDate() + diasFaltantes);
-        proximaSegunda.setHours(19, 40, 0, 0);
-        return proximaSegunda;
+        proxima.setDate(agora.getDate() + dias);
+        proxima.setHours(19, 40, 0, 0);
+        return proxima;
     }
 
-    // ==========================================================================
-    // 10. CONTAGEM REGRESSIVA
-    // ==========================================================================
-
+    // COUNTDOWN
     const domCdDays = document.getElementById('cd-days');
     const domCdHours = document.getElementById('cd-hours');
     const domCdMin = document.getElementById('cd-min');
     const domCdSec = document.getElementById('cd-sec');
 
     function tickCountdown() {
-        const agora = new Date().getTime();
-        const proximoCorre = calcularDataProximoCorre().getTime();
-        const diferenca = proximoCorre - agora;
-
-        if (diferenca <= 0) {
-            domCdDays.textContent = '00';
-            domCdHours.textContent = '00';
-            domCdMin.textContent = '00';
-            domCdSec.textContent = '00';
-            return;
-        }
-
-        domCdDays.textContent = String(Math.floor(diferenca / (1000 * 60 * 60 * 24))).padStart(2, '0');
-        domCdHours.textContent = String(Math.floor((diferenca % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
-        domCdMin.textContent = String(Math.floor((diferenca % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
-        domCdSec.textContent = String(Math.floor((diferenca % (1000 * 60)) / 1000)).padStart(2, '0');
+        const diff = calcularDataProximoCorre().getTime() - Date.now();
+        if (diff <= 0) { domCdDays.textContent = domCdHours.textContent = domCdMin.textContent = domCdSec.textContent = '00'; return; }
+        domCdDays.textContent = String(Math.floor(diff / 86400000)).padStart(2, '0');
+        domCdHours.textContent = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0');
+        domCdMin.textContent = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+        domCdSec.textContent = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
     }
-
     tickCountdown();
     setInterval(tickCountdown, 1000);
 
-    // ==========================================================================
-    // 11. TOAST
-    // ==========================================================================
-
+    // TOAST
     let toastTimeout;
-    function exibirToast(mensagem) {
+    function exibirToast(msg) {
         clearTimeout(toastTimeout);
-        toastMessage.textContent = mensagem;
+        toastMessage.textContent = msg;
         toastNotification.classList.remove('hidden');
         toastTimeout = setTimeout(() => toastNotification.classList.add('hidden'), 4000);
     }
 
-    // ==========================================================================
-    // 12. CONFIGURAÇÕES DEV
-    // ==========================================================================
-
+    // CONFIGURAÇÕES DEV
     btnSaveDevSettings.addEventListener('click', () => {
         if (!isDevMode) return;
-        const novaSenhaOrg = devOrganizerPassInput.value.trim();
-        if (novaSenhaOrg.length < 3) {
-            alert('A senha do organizador deve ter pelo menos 3 caracteres!');
-            return;
-        }
-        organizerPassword = novaSenhaOrg;
+        const novaSenha = devOrganizerPassInput.value.trim();
+        if (novaSenha.length < 3) { alert('Senha deve ter pelo menos 3 caracteres!'); return; }
+        organizerPassword = novaSenha;
         permClearEnabled = devPermClear.checked;
         permExportEnabled = devPermExport.checked;
         localStorage.setItem(KEY_ORGANIZER_PASS, organizerPassword);
         localStorage.setItem(KEY_PERM_CLEAR, permClearEnabled);
         localStorage.setItem(KEY_PERM_EXPORT, permExportEnabled);
-        exibirToast('Permissões e senha salvas pelo Dev Master! 🛠️💾');
+        exibirToast('Permissões salvas! 🛠️💾');
         renderizarPainelAdmin();
     });
-
-    // ==========================================================================
-    // 13. INICIALIZAÇÃO
-    // ==========================================================================
-    carregarParticipantes();
-    atualizarInterface();
 });
