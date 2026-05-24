@@ -1527,3 +1527,66 @@ a {
     color: #86efac;
     text-decoration: underline;
 }
+
+/* ==========================================================================
+   ÁREA DE SORTEIO (ADMIN)
+   ========================================================================== */
+
+.admin-raffle-section {
+    margin-bottom: 32px;
+}
+
+.raffle-card {
+    background-color: #0c0c0c;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    text-align: center;
+    transition: var(--transition-smooth);
+}
+
+.raffle-card:hover {
+    border-color: var(--border-hover);
+}
+
+.raffle-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    background: rgba(74, 222, 128, 0.05); /* Fundo sutilmente verde */
+    padding: 20px;
+    border-radius: var(--border-radius-md);
+    width: 100%;
+    max-width: 500px;
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    animation: fadeInSlideUp 0.4s ease-out;
+}
+
+.raffle-label {
+    font-size: 11px;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.raffle-winner {
+    font-family: var(--font-heading);
+    font-size: 26px;
+    font-weight: 900;
+    color: #4ade80; /* Destaque verde no nome */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.raffle-details {
+    font-size: 13px;
+    font-family: monospace;
+    color: var(--text-secondary);
+}

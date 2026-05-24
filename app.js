@@ -31,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let permExportEnabled = localStorage.getItem(KEY_PERM_EXPORT) !== 'false';
 
     // SELETORES DOM (todos iguais ao seu app.js atual)
+    const btnDrawRaffle = document.getElementById('btn-draw-raffle');
+    const raffleResult = document.getElementById('raffle-result');
+    const raffleWinnerName = document.getElementById('raffle-winner-name');
+    const raffleWinnerDetails = document.getElementById('raffle-winner-details');
     const formPresenca = document.getElementById('form-presenca');
     const inputNome = document.getElementById('input-nome');
     const inputTelefone = document.getElementById('input-telefone');
@@ -476,4 +480,48 @@ document.addEventListener('DOMContentLoaded', () => {
         exibirToast('Permissões salvas! 🛠️💾');
         renderizarPainelAdmin();
     });
-});
+// LÓGICA DE SORTEIO
+    btnDrawRaffle.addEventListener('click', () => {
+        if (participantes.length === 0) {
+            alert('Não há nenhum atleta confirmado na lista para realizar o sorteio!');
+            return;
+        }
+
+        // Prepara a interface
+        raffleResult.classList.remove('hidden');
+        btnDrawRaffle.disabled = true;
+        btnDrawRaffle.querySelector('span').textContent = 'SORTEANDO...';
+        
+        let counter = 0;
+        const maxTicks = 20; // Quantidade de "giros" antes de parar
+        
+        // Efeito de "Roleta" mudando os nomes rapidamente
+        const interval = setInterval(() => {
+            const randomTempIndex = Math.floor(Math.random() * participantes.length);
+            const tempWinner = participantes[randomTempIndex];
+            
+            raffleWinnerName.style.color = 'var(--text-secondary)';
+            raffleWinnerName.textContent = tempWinner.nome;
+            raffleWinnerDetails.textContent = 'Girando a roleta...';
+            
+            counter++;
+            
+            // Quando a roleta terminar
+            if (counter >= maxTicks) {
+                clearInterval(interval);
+                
+                // Escolhe o VENCEDOR FINAL de fato
+                const finalIndex = Math.floor(Math.random() * participantes.length);
+                const winner = participantes[finalIndex];
+                
+                raffleWinnerName.style.color = '#4ade80';
+                raffleWinnerName.textContent = winner.nome;
+                raffleWinnerDetails.textContent = `${winner.faixaEtaria} • ${winner.telefone}`;
+                
+                btnDrawRaffle.disabled = false;
+                btnDrawRaffle.querySelector('span').textContent = 'SORTEAR OUTRO ATLETA';
+                exibirToast(`Sorteio concluído! ${winner.nome} foi o(a) sorteado(a)! 🎁`);
+            }
+        }, 70); // Velocidade da troca de nomes (70 milissegundos)
+    });
+});  
