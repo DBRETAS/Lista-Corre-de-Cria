@@ -1,506 +1,801 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CORRE DE CRIA - Lista de Presença</title>
-    <meta name="description" content="Confirme sua presença no Corre de Cria toda segunda-feira às 19:40. Diga não ao sedentarismo e venha correr na Beira-Rio!">
-    <link rel="icon" type="image/jpeg" href="./assets/favicon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-    <!-- Cabeçalho Principal (Glassmorphism Sticky) -->
+    <meta
+      name="description"
+      content="Confirme sua presença no Corre de Cria toda segunda-feira às 19:40. Diga não ao sedentarismo e venha correr na Beira-Rio!"
+    />
+    <link rel="icon" type="image/jpeg" href="./assets/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
     <header class="main-header no-print">
-        <div class="header-container">
-            <div class="logo-area">
-                <!-- IMG do Logotipo CORRE DE CRIA -->
-                <img src="./assets/LogoCorre.jpeg" alt="Corre de Cria" class="main-logo">
-            </div>
-            <div class ="event-title">
-                <h1 class="event-name">CORRE DE CRIA</h1>
-                <p class="event-tagline">Saindo do sedentarismo e dominando o asfalto. Toda segunda 19:40 Beira-Rio.</p>
-            </div>
-            <div class="event-brief-header">
-                <span class="badge-live">LIVE</span>
-                <span class="event-meta-info">Segundas-Feiras • 19:40 • Beira-Rio(EM FRENTE A QUADRA DE AREIA)</span>
-            </div>
-
-            <div class="header-actions">
-                <button id="btn-toggle-admin" class="btn btn-secondary-outline">
-                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                    </svg>
-                    <span>Organizador 🔒</span>
-                </button>
-            </div>
+      <div class="header-container">
+        <div class="logo-area">
+          <img
+            src="./assets/LogoCorre.jpeg"
+            alt="Corre de Cria"
+            class="main-logo"
+          />
         </div>
+        <div class="event-title">
+          <h1 class="event-name">CORRE DE CRIA</h1>
+          <p class="event-tagline">
+            Saindo do sedentarismo e dominando o asfalto. Toda segunda 19:40
+            Beira-Rio.
+          </p>
+        </div>
+        <div class="event-brief-header">
+          <span class="badge-live">LIVE</span>
+          <span class="event-meta-info"
+            >Segundas-Feiras • 19:40 • Beira-Rio(EM FRENTE A QUADRA DE
+            AREIA)</span
+          >
+        </div>
+
+        <div class="header-actions">
+          <button id="btn-toggle-admin" class="btn btn-secondary-outline">
+            <svg
+              class="icon-svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span>Organizador 🔒</span>
+          </button>
+        </div>
+      </div>
     </header>
 
-    <!-- Layout Grid Principal -->
     <main class="container-main no-print">
-        
-        <!-- Alerta de Sucesso / Feedback Global -->
-        <div id="toast-notification" class="toast hidden">
-            <span id="toast-message">Presença confirmada com sucesso! 🚀</span>
-        </div>
+      <div id="toast-notification" class="toast hidden">
+        <span id="toast-message">Presença confirmada com sucesso! 🚀</span>
+      </div>
 
-        <div class="main-grid">
-            
-            <!-- Coluna Esquerda: Formulário e Informações -->
-            <section class="grid-column-left">
-                
-                <!-- Card do Formulário -->
-                <div class="glass-card form-card card-glow">
-                    <h2 class="card-title">
-                        <svg class="icon-svg title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="8.5" cy="7" r="4"></circle>
-                            <line x1="20" y1="8" x2="20" y2="14"></line>
-                            <line x1="23" y1="11" x2="17" y2="11"></line>
-                        </svg>
-                        Confirmar Presença
-                    </h2>
-                    <p class="card-subtitle">Preencha os dados abaixo para garantir seu lugar no próximo corre.</p>
-                    
-                    <form id="form-presenca" novalidate>
-                        <!-- Campo: Nome Completo -->
-                        <div class="input-group">
-                            <label for="input-nome">Nome Completo</label>
-                            <div class="input-wrapper">
-                                <input type="text" id="input-nome" placeholder="Digite seu nome completo" required minlength="6">
-                                <span class="input-icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                </span>
-                            </div>
-                            <span class="error-message" id="error-nome">Por favor, insira seu nome completo (nome e sobrenome).</span>
-                        </div>
+      <div class="main-grid">
+        <section class="grid-column-left">
+          <div class="glass-card form-card card-glow">
+            <h2 class="card-title">
+              <svg
+                class="icon-svg title-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <line x1="20" y1="8" x2="20" y2="14"></line>
+                <line x1="23" y1="11" x2="17" y2="11"></line>
+              </svg>
+              Confirmar Presença
+            </h2>
+            <p class="card-subtitle">
+              Preencha os dados abaixo para garantir seu lugar no próximo corre.
+            </p>
 
-                        <!-- Campo: Telefone -->
-<div class="input-group">
-    <label for="input-telefone">Número de Contato (WhatsApp)</label>
-    <div class="input-wrapper">
-        <input type="text" id="input-telefone" placeholder="(00) 00000-0000" maxlength="15" required>
-        <span class="input-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.86-.86a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-        </span>
-    </div>
-    <span class="error-message" id="error-telefone">Insira um número válido no formato (00) 00000-0000.</span>
-</div>  
-
-                        <!-- Campo: Idade -->
-                        <div class="input-group">
-                            <label for="input-idade">Idade</label>
-                            <div class="input-wrapper">
-                                <input type="number" id="input-idade" placeholder="Ex: 25" min="5" max="100" required>
-                                <span class="input-icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
-                                </span>
-                            </div>
-                            <span class="error-message" id="error-idade">Por favor, insira uma idade válida (entre 5 e 100 anos).</span>
-                        </div>
-
-                        <!-- Botão de Envio -->
-                        <button type="submit" class="btn btn-primary btn-block" id="btn-submit">
-                            <span>CONFIRMAR NO CORRE</span>
-                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Card de Contagem Regressiva -->
-                <div class="glass-card countdown-card">
-                    <h3 class="card-title-sm">
-                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                        Contagem Regressiva pro Corre
-                    </h3>
-                    <p class="countdown-description">Toda segunda às 19:40 na quadra de areia da Beira-Rio.</p>
-                    
-                    <div class="countdown-grid">
-                        <div class="countdown-item">
-                            <span class="countdown-value" id="cd-days">00</span>
-                            <span class="countdown-label">DIAS</span>
-                        </div>
-                        <div class="countdown-divider">:</div>
-                        <div class="countdown-item">
-                            <span class="countdown-value" id="cd-hours">00</span>
-                            <span class="countdown-label">HORAS</span>
-                        </div>
-                        <div class="countdown-divider">:</div>
-                        <div class="countdown-item">
-                            <span class="countdown-value" id="cd-min">00</span>
-                            <span class="countdown-label">MIN</span>
-                        </div>
-                        <div class="countdown-divider">:</div>
-                        <div class="countdown-item">
-                            <span class="countdown-value" id="cd-sec">00</span>
-                            <span class="countdown-label">SEG</span>
-                        </div>
-                    </div>
-                </div>
-
-            </section>
-
-            <!-- Coluna Direita: Lista Pública -->
-            <section class="grid-column-right">
-                
-                <!-- Card da Lista Pública -->
-                <div class="glass-card list-card">
-                    <div class="list-card-header">
-                        <div>
-                            <h2 class="card-title">
-                                <svg class="icon-svg title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                                    <polyline points="10 9 9 9 8 9"></polyline>
-                                </svg>
-                                Confirmados no Corre
-                            </h2>
-                            <p class="card-subtitle">Veja quem já garantiu a saída do sedentarismo esta semana.</p>
-                        </div>
-                        <div class="presence-indicator-bubble">
-                            <span id="public-total-count" class="count-value">0</span>
-                            <span class="count-label">CORREDORES</span>
-                        </div>
-                    </div>
-
-                    <!-- Caixa de Pesquisa -->
-                    <div class="search-bar">
-                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
-                        <input type="text" id="search-input" placeholder="Pesquisar participante pelo nome...">
-                    </div>
-
-                    <!-- Grid da Lista Pública -->
-                    <div class="public-list-wrapper">
-                        <div id="public-empty-message" class="empty-list">
-                            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="8" x2="12" y2="12"></line>
-                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                            </svg>
-                            <p>Nenhum confirmado ainda. Seja o primeiro a se inscrever!</p>
-                        </div>
-                        <div id="public-list-grid" class="public-list-grid">
-                            <!-- Cards dos corredores serão gerados dinamicamente via JS -->
-                        </div>
-                    </div>
-                </div>
-
-            </section>
-        </div>
-
-        <!-- SEÇÃO: Painel do Organizador (Ocultável, protegido por senha) -->
-        <section id="admin-panel" class="admin-panel-section glass-card hidden card-glow">
-            
-            <!-- Painel do Desenvolvedor (Modo Dev Ativo) -->
-            <div id="dev-settings-box" class="dev-settings-box hidden">
-                <div class="dev-box-header">
-                    <h4>Configurações de Desenvolvedor (Modo Dev Ativo) 🛠️</h4>
-                    <span class="badge-dev">DEV MASTER</span>
-                </div>
-                <div class="dev-box-body">
-                    <div class="dev-control-row">
-                        <label class="dev-checkbox-label">
-                            <input type="checkbox" id="dev-perm-clear" checked>
-                            <span>Permitir que organizadores limpem a lista semanal</span>
-                        </label>
-                        <label class="dev-checkbox-label">
-                            <input type="checkbox" id="dev-perm-export" checked>
-                            <span>Permitir que organizadores baixem o relatório em PDF</span>
-                        </label>
-                    </div>
-                    <div class="dev-password-row">
-                        <div class="dev-pass-input-group">
-                            <label for="dev-organizer-pass-input">Nova Senha dos Organizadores:</label>
-                            <input type="text" id="dev-organizer-pass-input" value="Caradebode2026-" placeholder="Senha de organizador">
-                        </div>
-                        <button id="btn-save-dev-settings" class="btn btn-secondary-outline">
-                            SALVAR PERMISSÕES
-                        </button>
-                    </div>
-                </div>
+            <div id="auth-section" class="auth-section">
+              <div class="auth-icon-wrapper">
+                <svg
+                  class="icon-svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+              </div>
+              <h3 class="auth-title">Segurança e Prevenção</h3>
+              <p class="auth-desc">
+                Para proteger a lista contra spam, valide sua identidade fazendo
+                login no Google para liberar o formulário.
+              </p>
+              <button
+                id="btn-login-google"
+                type="button"
+                class="btn btn-secondary-outline btn-block"
+                style="margin-top: 15px"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                <span>Entrar com Google</span>
+              </button>
             </div>
 
-            <div class="admin-panel-header">
-                <div>
-                    <h2 class="card-title">
-                        <svg class="icon-svg title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                        </svg>
-                        Painel Administrativo do Organizador
-                    </h2>
-                    <p class="card-subtitle">Gerencie as inscrições, acompanhe estatísticas de idade e baixe o relatório final em PDF.</p>
+            <form id="form-presenca" class="hidden" novalidate>
+              <div id="user-info" class="user-info">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <svg
+                    class="icon-svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#4ade80"
+                    stroke-width="2"
+                  >
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                  <span id="user-info-text"></span>
                 </div>
-                <button id="btn-close-admin" class="btn-close-admin-x">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <button type="button" id="btn-logout" class="btn-logout">
+                  Sair da Conta
                 </button>
-            </div>
+              </div>
 
-            <!-- Grid de Estatísticas Detalhadas -->
-            <div class="admin-stats-grid">
-                <div class="admin-stat-card">
-                    <span class="stat-title">Total de Inscritos</span>
-                    <span class="stat-number" id="admin-stat-total">0</span>
-                    <span class="stat-desc">Participantes confirmados</span>
+              <div class="input-group">
+                <label for="input-nome">Nome Completo</label>
+                <div class="input-wrapper">
+                  <input
+                    type="text"
+                    id="input-nome"
+                    placeholder="Digite seu nome completo"
+                    required
+                    minlength="6"
+                  />
+                  <span class="input-icon">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                      ></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </span>
                 </div>
-                <div class="admin-stat-card">
-                    <span class="stat-title">Média de Idade</span>
-                    <span class="stat-number" id="admin-stat-avg-age">0</span>
-                    <span class="stat-desc">Anos de idade</span>
-                </div>
-                <div class="admin-stat-card full-width-mobile">
-                    <span class="stat-title">Distribuição por Faixa Etária</span>
-                    <div class="age-distribution-bars" id="age-dist-container">
-                        <!-- Barras de faixa etária geradas via JS -->
-                        <div class="dist-row">
-                            <span class="dist-label">Sub-18 (Cria Mirim):</span>
-                            <div class="bar-wrapper"><div class="bar" id="bar-sub18" style="width: 0%"></div></div>
-                            <span class="dist-count" id="count-sub18">0</span>
-                        </div>
-                        <div class="dist-row">
-                            <span class="dist-label">18-29 (Cria Ativo):</span>
-                            <div class="bar-wrapper"><div class="bar" id="bar-cria-ativo" style="width: 0%"></div></div>
-                            <span class="dist-count" id="count-cria-ativo">0</span>
-                        </div>
-                        <div class="dist-row">
-                            <span class="dist-label">30-45 (Cria Adulto):</span>
-                            <div class="bar-wrapper"><div class="bar" id="bar-cria-adulto" style="width: 0%"></div></div>
-                            <span class="dist-count" id="count-cria-adulto">0</span>
-                        </div>
-                        <div class="dist-row">
-                            <span class="dist-label">46+ (Cria Master):</span>
-                            <div class="bar-wrapper"><div class="bar" id="bar-cria-master" style="width: 0%"></div></div>
-                            <span class="dist-count" id="count-cria-master">0</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                <span class="error-message" id="error-nome"
+                  >Por favor, insira seu nome completo (nome e sobrenome).</span
+                >
+              </div>
 
-            <div class="admin-raffle-section">
-                <h3 class="admin-table-title" style="margin-bottom: 12px;">Sorteio de Brindes 🎁</h3>
-                <div class="raffle-card">
-                    <button id="btn-draw-raffle" class="btn btn-primary">
-                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="20 12 20 22 4 22 4 12"></polyline>
-                            <rect x="2" y="7" width="20" height="5"></rect>
-                            <line x1="12" y1="22" x2="12" y2="7"></line>
-                            <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
-                            <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
-                        </svg>
-                        <span>SORTEAR UM ATLETA</span>
-                    </button>
-                    
-                    <div id="raffle-result" class="raffle-result hidden">
-                        <span class="raffle-label">🎉 Vencedor Sorteado 🎉</span>
-                        <span id="raffle-winner-name" class="raffle-winner">---</span>
-                        <span id="raffle-winner-details" class="raffle-details">---</span>
-                    </div>
+              <div class="input-group">
+                <label for="input-telefone">Número de Contato (WhatsApp)</label>
+                <div class="input-wrapper">
+                  <input
+                    type="text"
+                    id="input-telefone"
+                    placeholder="(00) 00000-0000"
+                    maxlength="15"
+                    required
+                  />
+                  <span class="input-icon">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.86-.86a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"
+                      ></path>
+                    </svg>
+                  </span>
                 </div>
-            </div>
+                <span class="error-message" id="error-telefone"
+                  >Insira um número válido no formato (00) 00000-0000.</span
+                >
+              </div>
 
-            <!-- Ações Administrativas e Tabela -->
-            <div class="admin-actions-bar">
-                <h3 class="admin-table-title">Lista de Participantes Completa</h3>
-                <div class="admin-buttons-group">
-                    <button id="btn-download-pdf" class="btn btn-primary">
-                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        <span>BAIXAR RELATÓRIO PDF</span>
-                    </button>
-                    <button id="btn-clear-all" class="btn btn-danger-outline">
-                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            <line x1="10" y1="11" x2="10" y2="17"></line>
-                            <line x1="14" y1="11" x2="14" y2="17"></line>
-                        </svg>
-                        <span>LIMPAR LISTA SEMANAL</span>
-                    </button>
+              <div class="input-group">
+                <label for="input-idade">Idade</label>
+                <div class="input-wrapper">
+                  <input
+                    type="number"
+                    id="input-idade"
+                    placeholder="Ex: 25"
+                    min="5"
+                    max="100"
+                    required
+                  />
+                  <span class="input-icon">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                      <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                      <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                    </svg>
+                  </span>
                 </div>
-            </div>
+                <span class="error-message" id="error-idade"
+                  >Por favor, insira uma idade válida (entre 5 e 100
+                  anos).</span
+                >
+              </div>
 
-            <!-- Tabela Administrativa -->
-            <div class="admin-table-wrapper">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Nome Completo</th>
-                            <th>Telefone</th>
-                            <th>Idade</th>
-                            <th>Faixa Etária</th>
-                            <th style="width: 80px; text-align: center;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-table-body">
-                        <!-- Linhas da tabela serão geradas dinamicamente via JS -->
-                    </tbody>
-                </table>
-                <div id="admin-empty-message" class="empty-list hidden">
-                    <p>Nenhum participante cadastrado para exibir no gerenciador.</p>
-                </div>
-            </div>
+              <button
+                type="submit"
+                class="btn btn-primary btn-block"
+                id="btn-submit"
+              >
+                <span>CONFIRMAR NO CORRE</span>
+                <svg
+                  class="icon-svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </form>
+          </div>
 
+          <div class="glass-card countdown-card">
+            <h3 class="card-title-sm">
+              <svg
+                class="icon-svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              Contagem Regressiva pro Corre
+            </h3>
+            <p class="countdown-description">
+              Toda segunda às 19:40 na quadra de areia da Beira-Rio.
+            </p>
+
+            <div class="countdown-grid">
+              <div class="countdown-item">
+                <span class="countdown-value" id="cd-days">00</span>
+                <span class="countdown-label">DIAS</span>
+              </div>
+              <div class="countdown-divider">:</div>
+              <div class="countdown-item">
+                <span class="countdown-value" id="cd-hours">00</span>
+                <span class="countdown-label">HORAS</span>
+              </div>
+              <div class="countdown-divider">:</div>
+              <div class="countdown-item">
+                <span class="countdown-value" id="cd-min">00</span>
+                <span class="countdown-label">MIN</span>
+              </div>
+              <div class="countdown-divider">:</div>
+              <div class="countdown-item">
+                <span class="countdown-value" id="cd-sec">00</span>
+                <span class="countdown-label">SEG</span>
+              </div>
+            </div>
+          </div>
         </section>
 
+        <section class="grid-column-right">
+          <div class="glass-card list-card">
+            <div class="list-card-header">
+              <div>
+                <h2 class="card-title">
+                  <svg
+                    class="icon-svg title-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    ></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  Confirmados no Corre
+                </h2>
+                <p class="card-subtitle">
+                  Veja quem já garantiu a saída do sedentarismo esta semana.
+                </p>
+              </div>
+              <div class="presence-indicator-bubble">
+                <span id="public-total-count" class="count-value">0</span>
+                <span class="count-label">CORREDORES</span>
+              </div>
+            </div>
+
+            <div class="search-bar">
+              <svg
+                class="search-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="text"
+                id="search-input"
+                placeholder="Pesquisar participante pelo nome..."
+              />
+            </div>
+
+            <div class="public-list-wrapper">
+              <div id="public-empty-message" class="empty-list">
+                <svg
+                  class="empty-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <p>Nenhum confirmado ainda. Seja o primeiro a se inscrever!</p>
+              </div>
+              <div id="public-list-grid" class="public-list-grid"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section
+        id="admin-panel"
+        class="admin-panel-section glass-card hidden card-glow"
+      >
+        <div id="dev-settings-box" class="dev-settings-box hidden">
+          <div class="dev-box-header">
+            <h4>Configurações de Desenvolvedor (Modo Dev Ativo) 🛠️</h4>
+            <span class="badge-dev">DEV MASTER</span>
+          </div>
+          <div class="dev-box-body">
+            <div class="dev-control-row">
+              <label class="dev-checkbox-label">
+                <input type="checkbox" id="dev-perm-clear" checked />
+                <span>Permitir que organizadores limpem a lista semanal</span>
+              </label>
+              <label class="dev-checkbox-label">
+                <input type="checkbox" id="dev-perm-export" checked />
+                <span
+                  >Permitir que organizadores baixem o relatório em PDF</span
+                >
+              </label>
+            </div>
+            <div class="dev-password-row">
+              <div class="dev-pass-input-group">
+                <label for="dev-organizer-pass-input"
+                  >Nova Senha dos Organizadores:</label
+                >
+                <input
+                  type="text"
+                  id="dev-organizer-pass-input"
+                  value="Caradebode2026-"
+                  placeholder="Senha de organizador"
+                />
+              </div>
+              <button
+                id="btn-save-dev-settings"
+                class="btn btn-secondary-outline"
+              >
+                SALVAR PERMISSÕES
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-panel-header">
+          <div>
+            <h2 class="card-title">
+              <svg
+                class="icon-svg title-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              Painel Administrativo do Organizador
+            </h2>
+            <p class="card-subtitle">
+              Gerencie as inscrições, acompanhe estatísticas de idade e baixe o
+              relatório final em PDF.
+            </p>
+          </div>
+          <button id="btn-close-admin" class="btn-close-admin-x">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="admin-stats-grid">
+          <div class="admin-stat-card">
+            <span class="stat-title">Total de Inscritos</span>
+            <span class="stat-number" id="admin-stat-total">0</span>
+            <span class="stat-desc">Participantes confirmados</span>
+          </div>
+          <div class="admin-stat-card">
+            <span class="stat-title">Média de Idade</span>
+            <span class="stat-number" id="admin-stat-avg-age">0</span>
+            <span class="stat-desc">Anos de idade</span>
+          </div>
+          <div class="admin-stat-card full-width-mobile">
+            <span class="stat-title">Distribuição por Faixa Etária</span>
+            <div class="age-distribution-bars" id="age-dist-container">
+              <div class="dist-row">
+                <span class="dist-label">Sub-18 (Cria Mirim):</span>
+                <div class="bar-wrapper">
+                  <div class="bar" id="bar-sub18" style="width: 0%"></div>
+                </div>
+                <span class="dist-count" id="count-sub18">0</span>
+              </div>
+              <div class="dist-row">
+                <span class="dist-label">18-29 (Cria Ativo):</span>
+                <div class="bar-wrapper">
+                  <div class="bar" id="bar-cria-ativo" style="width: 0%"></div>
+                </div>
+                <span class="dist-count" id="count-cria-ativo">0</span>
+              </div>
+              <div class="dist-row">
+                <span class="dist-label">30-45 (Cria Adulto):</span>
+                <div class="bar-wrapper">
+                  <div class="bar" id="bar-cria-adulto" style="width: 0%"></div>
+                </div>
+                <span class="dist-count" id="count-cria-adulto">0</span>
+              </div>
+              <div class="dist-row">
+                <span class="dist-label">46+ (Cria Master):</span>
+                <div class="bar-wrapper">
+                  <div class="bar" id="bar-cria-master" style="width: 0%"></div>
+                </div>
+                <span class="dist-count" id="count-cria-master">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-raffle-section">
+          <h3 class="admin-table-title" style="margin-bottom: 12px">
+            Sorteio de Brindes 🎁
+          </h3>
+          <div class="raffle-card">
+            <button id="btn-draw-raffle" class="btn btn-primary">
+              <svg
+                class="icon-svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="20 12 20 22 4 22 4 12"></polyline>
+                <rect x="2" y="7" width="20" height="5"></rect>
+                <line x1="12" y1="22" x2="12" y2="7"></line>
+                <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+                <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+              </svg>
+              <span>SORTEAR UM ATLETA</span>
+            </button>
+
+            <div id="raffle-result" class="raffle-result hidden">
+              <span class="raffle-label">🎉 Vencedor Sorteado 🎉</span>
+              <span id="raffle-winner-name" class="raffle-winner">---</span>
+              <span id="raffle-winner-details" class="raffle-details">---</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-actions-bar">
+          <h3 class="admin-table-title">Lista de Participantes Completa</h3>
+          <div class="admin-buttons-group">
+            <button id="btn-download-pdf" class="btn btn-primary">
+              <svg
+                class="icon-svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>BAIXAR RELATÓRIO PDF</span>
+            </button>
+            <button id="btn-clear-all" class="btn btn-danger-outline">
+              <svg
+                class="icon-svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path
+                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                ></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+              <span>LIMPAR LISTA SEMANAL</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-table-wrapper">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Nome Completo</th>
+                <th>Telefone</th>
+                <th>Idade</th>
+                <th>Faixa Etária</th>
+                <th style="width: 100px; text-align: center">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="admin-table-body"></tbody>
+          </table>
+          <div id="admin-empty-message" class="empty-list hidden">
+            <p>Nenhum participante cadastrado para exibir no gerenciador.</p>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <!-- Rodapé & Patrocinadores -->
     <footer class="main-footer no-print">
-        <div class="footer-slogan">
-            <span class="slogan-main">CORRE DE CRIA</span>
-            <span class="slogan-sub">Saindo do sedentarismo e dominando o asfalto. Toda segunda 19:40 Beira-Rio.</span>
+      <div class="footer-slogan">
+        <span class="slogan-main">CORRE DE CRIA</span>
+        <span class="slogan-sub"
+          >Saindo do sedentarismo e dominando o asfalto. Toda segunda 19:40
+          Beira-Rio.</span
+        >
+      </div>
+
+      <div class="sponsors-section">
+        <h3 class="sponsors-title">APOIADORES & PATROCINADORES</h3>
+        <p class="sponsors-thanks">
+          O Corre de Cria acontece todas as segundas-feiras graças ao apoio
+          fundamental de parceiros que acreditam no poder da saúde, da corrida
+          de rua e do desenvolvimento da nossa comunidade. Agradecemos
+          imensamente a cada um dos nossos patrocinadores por nos ajudarem a
+          tirar as pessoas do sedentarismo e por fazerem este movimento crescer
+          a cada semana!
+        </p>
+
+        <div class="sponsors-grid">
+          <div class="card-telasguara">
+            <a href="https://www.telasguara.com.br/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+              <img
+                src="./assets/telas_guara.png"
+                alt="logo Telas Guara"
+                class="main-logo-svg"
+              />
+            </a>
+          </div>
+          <div class="card-repassa">
+            <a href="https://www.repassadelivery.com.br/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+              <img
+                src="./assets/repassa.png"
+                alt="logo Repassa Delivery"
+                class="main-logo-svg"
+              />
+            </a>
+          </div>
+          <div class="card-mixpremium">
+            <a href="https://www.instagram.com/mixpremiumeventos/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+              <img
+                src="./assets/MixPremium.png"
+                alt="logo Mix Premium Eventos"
+                class="main-logo-svg"
+              />
+            </a>
+          </div>
+          <div class="card-unimed">
+            <a href="https://www.corridao.com.br/site/corrida/index/3-corrida-da-unimed-tres-rios.html" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+              <img
+                src="./assets/unimed.png"
+                alt="logo Unimed Três Rios"
+                class="main-logo-svg"
+              />
+            </a>
+          </div>
+          <div class="card-mdmodas">
+            <a href="https://wa.me/5524992891690" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+              <img
+                src="./assets/MDModas.jpg"
+                alt="logo MD Modas"
+                class="main-logo-svg"
+              />
+            </a>
+          </div>
+          <div class="card-v6">
+            <a href="https://wa.me/5524992780133" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+              <img src="./assets/V6.jpg" alt="logo V6" class="main-logo-svg" />
+            </a>
+          </div>
+          <div class="card-brasileirissimo">
+            <a href="https://wa.me/5524992443477" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+              <img
+                src="./assets/brasileirissimo.jpeg"
+                alt="logo Brasileirissimo"
+                class="main-logo-svg"
+              />
+            </a>
+          </div>
         </div>
-        
-        <div class="sponsors-section">
-            <h3 class="sponsors-title">APOIADORES & PATROCINADORES</h3>
-            <p class="sponsors-thanks">
-                O Corre de Cria acontece todas as segundas-feiras graças ao apoio fundamental de parceiros que acreditam no poder da saúde, da corrida de rua e do desenvolvimento da nossa comunidade. Agradecemos imensamente a cada um dos nossos patrocinadores por nos ajudarem a tirar as pessoas do sedentarismo e por fazerem este movimento crescer a cada semana!
-            </p>
-            
-            <div class="sponsors-grid">
-                
-                <!-- Patrocinador 1: TELAS GUARÁ -->
-                <div class="card-telasguara">
-                    <img src="./assets/telas_guara.png" alt="logo Telas Guara" class="main-logo-svg">
-                </div>
-
-                <!-- Patrocinador 2: REPASSA DELIVERY -->
-                <div class="card-repassa">
-                    <img src="./assets/repassa.png" alt="logo Repassa Delivery" class="main-logo-svg">
-                </div>
-
-                <!-- Patrocinador 3: MIX PREMIUM EVENTOS -->
-                <div class="card-mixpremium">
-                    <img src="./assets/MixPremium.png" alt="logo Mix Premium Eventos" class="main-logo-svg">
-                </div>
-
-                <!-- Patrocinador 4: UNIMED TRÊS RIOS -->
-                <div class="card-unimed">
-                    <img src="./assets/unimed.png" alt="logo Unimed Três Rios" class="main-logo-svg">
-                </div>
-
-                <!-- Patrocinador 5: MD MODAS -->
-                <div class="card-mdmodas">
-                    <img src="./assets/MDModas.jpg" alt="logo MD Modas" class="main-logo-svg">
-                </div>
-
-                <!-- Patrocinador 6: V6 -->
-                <div class="card-v6">
-                    <img src="./assets/V6.jpg" alt="logo V6" class="main-logo-svg">
-                </div>
-
-                <!-- Patrocinador 7: Brasileirissimo -->
-                <div class="card-brasileirissimo">
-                    <img src="./assets/brasileirissimo.jpeg" alt="logo Brasileirissimo" class="main-logo-svg">
-                </div>
-
-
-            </div>
-        </div>
-        <div class="footer-credits">
-    <p>Desenvolvido com 🖤 por</p>
-    <a href="https://github.com/DBRETAS" target="_blank">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.85">
-            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
-        </svg>
-        Davi Bretas
-    </a>
-    <!-- CONTATO WHATSAPP -->
-    <a href="https://wa.me/5524988534120" target="_blank" class="footer-whatsapp">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.85">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
-        </svg>
-        (24) 98853-4120
-    </a>
-
-    <span class="credits-copy">© 2025 Corre de Cria • Todos os direitos reservados</span>
-</div>
-    
+      </div>
+      <div class="footer-credits">
+        <p>Desenvolvido com 🖤 por</p>
+        <a href="https://github.com/DBRETAS" target="_blank"> Davi Bretas </a>
+        <a
+          href="https://wa.me/5524988534120"
+          target="_blank"
+          class="footer-whatsapp"
+        >
+          (24) 98853-4120
+        </a>
+        <span class="credits-copy"
+          >© 2025 Corre de Cria • Todos os direitos reservados</span
+        >
+      </div>
     </footer>
 
-    <!-- MODAL DE SENHA DO ORGANIZADOR -->
     <div id="admin-auth-modal" class="modal-backdrop hidden no-print">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3>Acesso Restrito 🔒</h3>
-                <button id="btn-close-modal" class="btn-close-modal-x">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Por favor, insira a senha dos organizadores do Corre de Cria para acessar os relatórios e baixar o PDF.</p>
-                <div class="input-group">
-                    <label for="input-admin-password">Senha de Acesso</label>
-                    <div class="input-wrapper">
-                        <input type="password" id="input-admin-password" placeholder="Digite a senha administrativa">
-                        <span class="input-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        </span>
-                    </div>
-                    <span class="error-message" id="error-admin-password">Senha incorreta. Tente novamente!</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="btn-auth-cancel" class="btn btn-secondary-outline">CANCELAR</button>
-                <button id="btn-auth-confirm" class="btn btn-primary">DESBLOQUEAR</button>
-            </div>
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Acesso Restrito 🔒</h3>
+          <button id="btn-close-modal" class="btn-close-modal-x">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
+        <div class="modal-body">
+          <p>
+            Por favor, insira a senha dos organizadores do Corre de Cria para
+            acessar os relatórios e baixar o PDF.
+          </p>
+          <div class="input-group">
+            <label for="input-admin-password">Senha de Acesso</label>
+            <div class="input-wrapper">
+              <input
+                type="password"
+                id="input-admin-password"
+                placeholder="Digite a senha administrativa"
+              />
+              <span class="input-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect
+                    x="3"
+                    y="11"
+                    width="18" height="11"
+                    rx="2"
+                    ry="2"
+                  ></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </span>
+            </div>
+            <span class="error-message" id="error-admin-password"
+              >Senha incorreta. Tente novamente!</span
+            >
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-auth-cancel" class="btn btn-secondary-outline">
+            CANCELAR
+          </button>
+          <button id="btn-auth-confirm" class="btn btn-primary">
+            DESBLOQUEAR
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- MÁSCARA EXCLUSIVA PARA A IMPRESSÃO DO PDF (Oculta nativamente, visível apenas no @media print) -->
     <div class="print-only-container">
-        <div class="print-header">
-            <h1 class="print-title">CORRE DE CRIA</h1>
-            <p class="print-subtitle">Relatório Oficial de Presença para Corrida de Segunda-feira</p>
-            <div class="print-meta-grid">
-                <div><strong>Data do Corre:</strong> <span id="print-date-today">Segunda-feira</span></div>
-                <div><strong>Horário de Encontro:</strong> 19:40</div>
-                <div><strong>Local:</strong> Em frente à quadra de areia - Beira-Rio</div>
-                <div><strong>Total de Confirmados:</strong> <span id="print-total-count">0</span></div>
-            </div>
+      <div class="print-header">
+        <h1 class="print-title">CORRE DE CRIA</h1>
+        <p class="print-subtitle">
+          Relatório Oficial de Presença para Corrida de Segunda-feira
+        </p>
+        <div class="print-meta-grid">
+          <div>
+            <strong>Data do Corre:</strong>
+            <span id="print-date-today">Segunda-feira</span>
+          </div>
+          <div><strong>Horário de Encontro:</strong> 19:40</div>
+          <div>
+            <strong>Local:</strong> Em frente à quadra de areia - Beira-Rio
+          </div>
+          <div>
+            <strong>Total de Confirmados:</strong>
+            <span id="print-total-count">0</span>
+          </div>
         </div>
+      </div>
 
-        <table class="print-table">
-            <thead>
-                <tr>
-                    <th>Nº</th>
-                    <th>Nome Completo</th>
-                    <th>Telefone (Mascarado)</th>
-                    <th>Idade</th>
-                    <th>Faixa Etária</th>
-                    <th>Assinatura do Participante</th>
-                </tr>
-            </thead>
-            <tbody id="print-table-body">
-                <!-- Preenchido dinamicamente via JS antes de disparar window.print() -->
-            </tbody>
-        </table>
-        
-        <div class="print-footer">
-            <p>Relatório gerado automaticamente em <span id="print-date-generated">--/--/----</span>.</p>
-            <p class="print-slogan">"Saindo do sedentarismo e dominando o asfalto. Corre de Cria."</p>
-        </div>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>Nº</th>
+            <th>Nome Completo</th>
+            <th>Telefone (Mascarado)</th>
+            <th>Idade</th>
+            <th>Faixa Etária</th>
+            <th>Assinatura do Participante</th>
+          </tr>
+        </thead>
+        <tbody id="print-table-body"></tbody>
+      </table>
+
+      <div class="print-footer">
+        <p>
+          Relatório gerado automaticamente em
+          <span id="print-date-generated">--/--/----</span>.
+        </p>
+        <p class="print-slogan">
+          "Saindo do sedentarismo e dominando o asfalto. Corre de Cria."
+        </p>
+      </div>
     </div>
 
     <script type="module" src="app.js"></script>
-</body>
+  </body>
 </html>
