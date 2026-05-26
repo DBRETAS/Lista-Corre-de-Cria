@@ -37,6 +37,32 @@ const provider = new GoogleAuthProvider();
 const colecao = collection(db, "participantes");
 const colecaoBans = collection(db, "banned_ips");
 
+// Comprime imagem para base64 usando Canvas (~150x150px, qualidade 0.7)
+function comprimirFotoParaBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Erro ao ler o arquivo."));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Imagem inválida."));
+      img.onload = () => {
+        const MAX = 150;
+        let w = img.width;
+        let h = img.height;
+        if (w > h) { h = Math.round((h * MAX) / w); w = MAX; }
+        else       { w = Math.round((w * MAX) / h); h = MAX; }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   let participantes = [];
   let isAdminUnlocked = false;
@@ -69,6 +95,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputNome = document.getElementById("input-nome");
   const inputTelefone = document.getElementById("input-telefone");
   const inputIdade = document.getElementById("input-idade");
+  const inputFoto = document.getElementById("input-foto");
+  const fotoPreview = document.getElementById("foto-preview");
+  const fotoPreviewImg = document.getElementById("foto-preview-img");
   const errorTelefone = document.getElementById("error-telefone");
   const publicTotalCount = document.getElementById("public-total-count");
   const searchInput = document.getElementById("search-input");
@@ -156,6 +185,21 @@ document.addEventListener("DOMContentLoaded", () => {
   onSnapshot(q, (snapshot) => {
     participantes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     atualizarInterface();
+  });
+
+  // PREVIEW DE FOTO
+  inputFoto && inputFoto.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        fotoPreviewImg.src = ev.target.result;
+        fotoPreview.classList.remove("hidden");
+      };
+      reader.readAsDataURL(file);
+    } else {
+      fotoPreview.classList.add("hidden");
+    }
   });
 
   // MÁSCARAS & VALIDAÇÕES
@@ -286,6 +330,13 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
 
+        // Comprime e converte foto para base64 (sem Firebase Storage)
+        let fotoUrl = null;
+        const fotoFile = inputFoto && inputFoto.files[0];
+        if (fotoFile) {
+          fotoUrl = await comprimirFotoParaBase64(fotoFile);
+        }
+
         await addDoc(colecao, {
           nome: formatarCapitalize(nomeVal),
           telefone: telVal,
@@ -293,11 +344,15 @@ document.addEventListener("DOMContentLoaded", () => {
           faixaEtaria: classificarFaixaEtaria(idadeVal),
           dataCadastro: new Date().toISOString(),
           emailAtrelado: currentUser ? currentUser.email : "desconhecido",
+          uid: currentUser ? currentUser.uid : null,
+          fotoUrl: fotoUrl,
           ip: userIp,
         });
 
         exibirToast("Presença confirmada no Corre! Corre de Cria ⚡");
         formPresenca.reset();
+        if (inputFoto) inputFoto.value = "";
+        if (fotoPreview) fotoPreview.classList.add("hidden");
         document
           .querySelectorAll(".input-group")
           .forEach((el) => el.classList.remove("invalid"));
@@ -342,8 +397,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const card = document.createElement("div");
       card.className = "runner-card-pub";
       const badgeCompacto = p.faixaEtaria.split(" ")[1] || p.faixaEtaria;
+      const avatarHtml = p.fotoUrl
+        ? `<img src="${p.fotoUrl}" alt="Foto de ${p.nome}" class="runner-avatar" />`
+        : `<div class="runner-avatar-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`;
       card.innerHTML = `
                 <div class="runner-info-left">
+                    ${avatarHtml}
                     <span class="runner-name">${p.nome}</span>
                 </div>
                 <span class="runner-badge-age">${badgeCompacto}</span>

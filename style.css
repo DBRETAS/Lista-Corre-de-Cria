@@ -1308,8 +1308,98 @@ a {
 }
 
 /* ==========================================================================
-   DIRETIVAS EXCLUSIVAS DE IMPRESSÃO (GERAÇÃO DE PDF DE ALTA FIDELIDADE)
+   FOTO DE PERFIL — UPLOAD, PREVIEW E AVATAR NOS CARDS
    ========================================================================== */
+
+.foto-upload-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background-color: #0c0c0c;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--border-radius-md);
+  color: var(--text-secondary);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  width: 100%;
+  justify-content: center;
+}
+
+.foto-upload-label:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  background-color: #121212;
+}
+
+.foto-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background-color: rgba(74, 222, 128, 0.05);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: var(--border-radius-md);
+  animation: fadeInSlideUp 0.25s ease-out;
+}
+
+.foto-preview img {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(74, 222, 128, 0.4);
+}
+
+.foto-preview-label {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 600;
+  color: #4ade80;
+}
+
+/* Avatar nos cards da lista pública */
+.runner-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.runner-avatar-placeholder {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: var(--accent-grey);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.runner-avatar-placeholder svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Ajuste do runner-info-left para alinhar avatar + nome */
+.runner-info-left {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+
 
 @media print {
   /* Ocultar elementos desnecessários da aplicação */
