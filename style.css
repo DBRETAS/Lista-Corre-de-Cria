@@ -204,6 +204,89 @@ body.light-mode .toast {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
 }
 
+/* ==========================================================================
+   LIGHT MODE — PAINEL ADMIN & DEV
+   ========================================================================== */
+
+/* Cards de estatística */
+body.light-mode .admin-stat-card {
+  background-color: #ffffff !important;
+  border-color: #e0e0e0 !important;
+}
+
+body.light-mode .stat-number {
+  color: #111111 !important;
+}
+
+body.light-mode .stat-desc {
+  color: #666666 !important;
+}
+
+/* Tabela admin */
+body.light-mode .admin-table-wrapper {
+  background-color: #ffffff !important;
+  border-color: #e0e0e0 !important;
+}
+
+body.light-mode .admin-table th {
+  background-color: #f5f5f5 !important;
+  color: #555555 !important;
+  border-bottom-color: #e0e0e0 !important;
+}
+
+body.light-mode .admin-table td {
+  color: #111111 !important;
+  border-bottom-color: #f0f0f0 !important;
+}
+
+body.light-mode .admin-table tbody tr:hover {
+  background-color: #f9f9f9 !important;
+}
+
+/* Barras de distribuição etária */
+body.light-mode .dist-bar-bg {
+  background-color: #e8e8e8 !important;
+}
+
+/* Dev settings box */
+body.light-mode .dev-settings-box {
+  background-color: #f5f5f5 !important;
+  border-color: #cccccc !important;
+}
+
+body.light-mode .dev-box-header {
+  border-bottom-color: #e0e0e0 !important;
+}
+
+body.light-mode .dev-box-header h4 {
+  color: #111111 !important;
+}
+
+body.light-mode .dev-checkbox-label {
+  color: #333333 !important;
+}
+
+body.light-mode .dev-checkbox-label input[type="checkbox"] {
+  accent-color: #111111 !important;
+}
+
+body.light-mode .badge-dev {
+  background-color: #111111 !important;
+  color: #ffffff !important;
+}
+
+/* Raffle card */
+body.light-mode .raffle-card {
+  background-color: #ffffff !important;
+  border-color: #cccccc !important;
+}
+
+/* Fechar admin (X) */
+body.light-mode .btn-close-admin-x:hover {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+  color: #111111 !important;
+}
+
 body.light-mode .runner-badge-age {
   background-color: #e8e8e8;
   color: #111111;
