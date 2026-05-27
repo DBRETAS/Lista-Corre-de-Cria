@@ -74,9 +74,134 @@ body.light-mode .badge-live {
 
 body.light-mode input,
 body.light-mode select {
-  background-color: #f7f7f7;
-  color: #111111;
-  border-color: #d0d0d0;
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  border-color: #d0d0d0 !important;
+}
+
+/* Input wrapper — fundo e foco no light mode */
+body.light-mode .input-wrapper input {
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  border-color: #d0d0d0 !important;
+}
+
+body.light-mode .input-wrapper input:focus {
+  background-color: #ffffff !important;
+  border-color: #111111 !important;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08) !important;
+  color: #111111 !important;
+}
+
+body.light-mode .input-wrapper input::placeholder {
+  color: #aaaaaa !important;
+}
+
+/* Ícone do input no focus */
+body.light-mode .input-wrapper input:focus + .input-icon {
+  color: #111111 !important;
+}
+
+/* Search bar */
+body.light-mode .search-bar input {
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  border-color: #d0d0d0 !important;
+}
+
+body.light-mode .search-bar input:focus {
+  background-color: #ffffff !important;
+  border-color: #111111 !important;
+  color: #111111 !important;
+}
+
+body.light-mode .search-bar input::placeholder {
+  color: #aaaaaa !important;
+}
+
+/* Input do modal admin */
+body.light-mode .dev-pass-input-group input {
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  border-color: #d0d0d0 !important;
+}
+
+body.light-mode .dev-pass-input-group input:focus {
+  background-color: #ffffff !important;
+  border-color: #111111 !important;
+  color: #111111 !important;
+}
+
+/* Input de senha do modal */
+body.light-mode #input-admin-password {
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  border-color: #d0d0d0 !important;
+}
+
+body.light-mode #input-admin-password:focus {
+  background-color: #ffffff !important;
+  border-color: #111111 !important;
+  color: #111111 !important;
+}
+
+body.light-mode #input-admin-password::placeholder {
+  color: #aaaaaa !important;
+}
+
+/* Runner cards da lista pública */
+body.light-mode .runner-card-pub {
+  background-color: #ffffff !important;
+  border-color: #e0e0e0 !important;
+  color: #111111 !important;
+}
+
+body.light-mode .runner-card-pub:hover {
+  border-color: #aaaaaa !important;
+  background-color: #f5f5f5 !important;
+}
+
+body.light-mode .runner-name {
+  color: #111111 !important;
+}
+
+/* Modal footer */
+body.light-mode .modal-footer {
+  background-color: #f5f5f5 !important;
+  border-top-color: #e0e0e0 !important;
+}
+
+/* Botão cancelar no modal — texto legível */
+body.light-mode .btn-auth-cancel,
+body.light-mode #btn-auth-cancel {
+  background-color: #e8e8e8 !important;
+  color: #111111 !important;
+  border-color: #cccccc !important;
+}
+
+body.light-mode .btn-auth-cancel:hover,
+body.light-mode #btn-auth-cancel:hover {
+  background-color: #dddddd !important;
+}
+
+/* Btn secondary outline no light */
+body.light-mode .btn-secondary-outline {
+  background-color: #ffffff !important;
+  border-color: #cccccc !important;
+  color: #111111 !important;
+}
+
+body.light-mode .btn-secondary-outline:hover {
+  background-color: #f0f0f0 !important;
+  border-color: #111111 !important;
+  color: #111111 !important;
+}
+
+/* Toast no light mode */
+body.light-mode .toast {
+  background-color: #111111 !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
 }
 
 body.light-mode .runner-badge-age {
@@ -114,7 +239,7 @@ body.light-mode .foto-upload-label:hover {
 
 /* CORREÇÕES DO MODO CLARO */
 body.light-mode .slogan-main {
-  color: #111111;
+  color: #ffffff;
 }
 
 body.light-mode .slogan-sub {
