@@ -813,16 +813,8 @@
       document.getElementById("link-unimed").addEventListener("click", function (e) {
         e.preventDefault();
         const url = this.href;
-        // Abre a aba imediatamente (gesto direto do usuário) — necessário para iOS não bloquear
-        const novaAba = window.open("", "_blank");
         alert("🏃 Dica importante para sua inscrição na corrida da Unimed:\n\n📋 Cupom: CORRE DE CRIA\n👥 Equipe: CORRE DE CRIA\n\nUse essas informações no momento do cadastro!\nVocê será redirecionado agora.");
-        // Após fechar o alert, direciona a aba já aberta para a URL
-        if (novaAba) {
-          novaAba.location.href = url;
-        } else {
-          // Fallback caso o navegador ainda bloqueie
-          window.location.href = url;
-        }
+        window.open(url, "_blank");
       });
     </script>
 
