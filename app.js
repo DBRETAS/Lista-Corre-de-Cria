@@ -205,15 +205,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Verifica se o usuário logado já está na lista
   async function verificarPresencaUsuario(uid) {
+    // Não atualiza o form se o usuário está no meio de uma edição ativa
+    const estaEditando = !!formPresenca.dataset.editId;
     const existente = participantes.find((p) => p.uid === uid);
     if (existente) {
-      // Já confirmou — mostra botões de editar/cancelar e preenche o form
+      // Já confirmou — mostra botões de editar/cancelar
       editPresenceArea.classList.remove("hidden");
-      btnSubmit.querySelector("span").textContent = "ATUALIZAR PRESENÇA";
-      inputNome.value = existente.nome;
-      inputTelefone.value = existente.telefone;
-      inputIdade.value = existente.idade;
       formPresenca.dataset.editId = existente.id;
+      if (!estaEditando) {
+        // Só preenche o form automaticamente se não estava editando
+        btnSubmit.querySelector("span").textContent = "ATUALIZAR PRESENÇA";
+        inputNome.value = existente.nome;
+        inputTelefone.value = existente.telefone;
+        inputIdade.value = existente.idade;
+      }
     } else {
       // Ainda não confirmou
       editPresenceArea.classList.add("hidden");
@@ -222,8 +227,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Botão editar — apenas habilita o form para reedição (já está preenchido)
+  // Botão editar — repopula os campos com os dados salvos do usuário
   btnEditPresence.addEventListener("click", () => {
+    if (!currentUser) return;
+    const existente = participantes.find((p) => p.uid === currentUser.uid);
+    if (!existente) return;
+
+    // Preenche os campos com os dados anteriores
+    inputNome.value = existente.nome;
+    inputTelefone.value = existente.telefone;
+    inputIdade.value = existente.idade;
+    formPresenca.dataset.editId = existente.id;
+
+    // Mostra preview da foto salva, se houver
+    if (existente.fotoUrl && fotoPreviewImg && fotoPreview) {
+      fotoPreviewImg.src = existente.fotoUrl;
+      fotoPreview.classList.remove("hidden");
+    }
+
+    // Atualiza o texto do botão de envio
+    btnSubmit.querySelector("span").textContent = "ATUALIZAR PRESENÇA";
+
+    // Remove marcações de erro residuais
+    document.querySelectorAll(".input-group").forEach((el) => el.classList.remove("invalid"));
+
     exibirToast("Edite os campos e clique em ATUALIZAR PRESENÇA ✏️");
     inputNome.focus();
   });
@@ -361,8 +388,9 @@ document.addEventListener("DOMContentLoaded", () => {
       isValido = false;
     } else {
       const telLimpo = telVal.replace(/\D/g, "");
+      const editId = formPresenca.dataset.editId;
       const telExistente = participantes.some(
-        (p) => p.telefone.replace(/\D/g, "") === telLimpo,
+        (p) => p.telefone.replace(/\D/g, "") === telLimpo && p.id !== editId,
       );
       if (telExistente) {
         errorTelefone.textContent =
