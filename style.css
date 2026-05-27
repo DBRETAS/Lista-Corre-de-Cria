@@ -36,6 +36,117 @@
   --border-radius-sm: 6px;
 }
 
+/* TEMA CLARO */
+body.light-mode {
+  --bg-dark: #f0f0f0;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f7f7f7;
+  --border-color: #e0e0e0;
+  --border-hover: #c0c0c0;
+  --text-primary: #111111;
+  --text-secondary: #555555;
+  --text-muted: #999999;
+  --accent-white: #111111;
+  --accent-grey: #e8e8e8;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glow-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+  --active-glow-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode .main-header {
+  background-color: rgba(240, 240, 240, 0.92);
+  border-bottom-color: var(--border-color);
+}
+
+body.light-mode .btn-primary {
+  background-color: #111111;
+  color: #ffffff;
+}
+
+body.light-mode .btn-primary:hover {
+  background-color: #333333;
+}
+
+body.light-mode .badge-live {
+  background-color: #111111;
+  color: #ffffff;
+}
+
+body.light-mode input,
+body.light-mode select {
+  background-color: #f7f7f7;
+  color: #111111;
+  border-color: #d0d0d0;
+}
+
+body.light-mode .runner-badge-age {
+  background-color: #e8e8e8;
+  color: #111111;
+}
+
+body.light-mode .foto-upload-label {
+  background-color: #f7f7f7;
+  border-color: #d0d0d0;
+  color: #555555;
+}
+
+body.light-mode .foto-upload-label:hover {
+  background-color: #eeeeee;
+  color: #111111;
+}
+
+/* Label do botão compartilhar some em telas pequenas */
+@media (max-width: 600px) {
+  .btn-share-label {
+    display: none;
+  }
+}
+
+/* Botões do header lado a lado com gap de 10px */
+.header-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+/* CORREÇÕES DO MODO CLARO */
+body.light-mode .slogan-main {
+  color: #111111;
+}
+
+body.light-mode .slogan-sub {
+  color: #666666;
+}
+
+body.light-mode .countdown-value {
+  color: #111111;
+}
+
+body.light-mode .countdown-divider {
+  color: #999999;
+}
+
+body.light-mode .countdown-label {
+  color: #888888;
+}
+
+/* Logo: mostra versão preta no light, branca no dark */
+.logo-dark-mode {
+  display: block;
+}
+.logo-light-mode {
+  display: none;
+}
+body.light-mode .logo-dark-mode {
+  display: none;
+}
+body.light-mode .logo-light-mode {
+  display: block;
+}
+
 /* ==========================================================================
    RESET & CONFIGURAÇÕES BÁSICAS
    ========================================================================== */
@@ -416,6 +527,11 @@ a {
   background: linear-gradient(135deg, #121212, #070707);
 }
 
+body.light-mode .countdown-card {
+  background: linear-gradient(135deg, #ffffff, #f0f0f0);
+  border-color: var(--border-color);
+}
+
 .countdown-description {
   color: var(--text-secondary);
   font-size: 13px;
@@ -430,6 +546,10 @@ a {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-md);
   padding: 16px 24px;
+}
+
+body.light-mode .countdown-grid {
+  background-color: #f0f0f0;
 }
 
 .countdown-item {

@@ -92,6 +92,43 @@ document.addEventListener("DOMContentLoaded", () => {
   const raffleWinnerName = document.getElementById("raffle-winner-name");
   const raffleWinnerDetails = document.getElementById("raffle-winner-details");
 
+  // NOVOS SELETORES
+  const btnToggleTheme = document.getElementById("btn-toggle-theme");
+  const iconMoon = document.getElementById("icon-moon");
+  const iconSun = document.getElementById("icon-sun");
+  const btnShareWhatsapp = document.getElementById("btn-share-whatsapp");
+  const editPresenceArea = document.getElementById("edit-presence-area");
+  const btnEditPresence = document.getElementById("btn-edit-presence");
+  const btnCancelPresence = document.getElementById("btn-cancel-presence");
+
+  // ==========================================
+  // TEMA CLARO / ESCURO
+  // ==========================================
+  const savedTheme = localStorage.getItem("cdc_theme");
+  if (savedTheme === "light") {
+    document.body.classList.add("light-mode");
+    iconMoon.classList.add("hidden");
+    iconSun.classList.remove("hidden");
+  }
+
+  btnToggleTheme.addEventListener("click", () => {
+    const isLight = document.body.classList.toggle("light-mode");
+    iconMoon.classList.toggle("hidden", isLight);
+    iconSun.classList.toggle("hidden", !isLight);
+    localStorage.setItem("cdc_theme", isLight ? "light" : "dark");
+  });
+
+  // ==========================================
+  // COMPARTILHAR NO WHATSAPP
+  // ==========================================
+  btnShareWhatsapp.addEventListener("click", () => {
+    const total = participantes.length;
+    const url = window.location.href;
+    const texto = `🏃 *CORRE DE CRIA*\n\nJá somos *${total} confirmados* no próximo corre!\n\nConfirme sua presença agora:\n${url}\n\n_Toda segunda • 19:40 • Beira-Rio ⚡_`;
+    const link = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+    window.open(link, "_blank");
+  });
+
   const inputNome = document.getElementById("input-nome");
   const inputTelefone = document.getElementById("input-telefone");
   const inputIdade = document.getElementById("input-idade");
@@ -149,18 +186,61 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================
   // AUTENTICAÇÃO DE USUÁRIO (NOVO)
   // ==========================================
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
-      // Esconde aviso de login e mostra o formulário
       authSection.classList.add("hidden");
       formPresenca.classList.remove("hidden");
       userInfoText.textContent = `${user.email}`;
+
+      // Verifica se o usuário já tem presença cadastrada
+      await verificarPresencaUsuario(user.uid);
     } else {
       currentUser = null;
-      // Mostra aviso de login e esconde formulário
       authSection.classList.remove("hidden");
       formPresenca.classList.add("hidden");
+      editPresenceArea.classList.add("hidden");
+    }
+  });
+
+  // Verifica se o usuário logado já está na lista
+  async function verificarPresencaUsuario(uid) {
+    const existente = participantes.find((p) => p.uid === uid);
+    if (existente) {
+      // Já confirmou — mostra botões de editar/cancelar e preenche o form
+      editPresenceArea.classList.remove("hidden");
+      btnSubmit.querySelector("span").textContent = "ATUALIZAR PRESENÇA";
+      inputNome.value = existente.nome;
+      inputTelefone.value = existente.telefone;
+      inputIdade.value = existente.idade;
+      formPresenca.dataset.editId = existente.id;
+    } else {
+      // Ainda não confirmou
+      editPresenceArea.classList.add("hidden");
+      btnSubmit.querySelector("span").textContent = "CONFIRMAR NO CORRE";
+      delete formPresenca.dataset.editId;
+    }
+  }
+
+  // Botão editar — apenas habilita o form para reedição (já está preenchido)
+  btnEditPresence.addEventListener("click", () => {
+    exibirToast("Edite os campos e clique em ATUALIZAR PRESENÇA ✏️");
+    inputNome.focus();
+  });
+
+  // Botão cancelar presença
+  btnCancelPresence.addEventListener("click", async () => {
+    const editId = formPresenca.dataset.editId;
+    if (!editId) return;
+    if (confirm("Deseja cancelar sua presença no Corre de Cria?")) {
+      await deleteDoc(doc(db, "participantes", editId));
+      delete formPresenca.dataset.editId;
+      formPresenca.reset();
+      if (inputFoto) inputFoto.value = "";
+      if (fotoPreview) fotoPreview.classList.add("hidden");
+      editPresenceArea.classList.add("hidden");
+      btnSubmit.querySelector("span").textContent = "CONFIRMAR NO CORRE";
+      exibirToast("Presença cancelada. Até a próxima! 👋");
     }
   });
 
@@ -337,19 +417,38 @@ document.addEventListener("DOMContentLoaded", () => {
           fotoUrl = await comprimirFotoParaBase64(fotoFile);
         }
 
-        await addDoc(colecao, {
-          nome: formatarCapitalize(nomeVal),
-          telefone: telVal,
-          idade: parseInt(idadeVal, 10),
-          faixaEtaria: classificarFaixaEtaria(idadeVal),
-          dataCadastro: new Date().toISOString(),
-          emailAtrelado: currentUser ? currentUser.email : "desconhecido",
-          uid: currentUser ? currentUser.uid : null,
-          fotoUrl: fotoUrl,
-          ip: userIp,
-        });
+        const editId = formPresenca.dataset.editId;
 
-        exibirToast("Presença confirmada no Corre! Corre de Cria ⚡");
+        if (editId) {
+          // MODO EDIÇÃO — atualiza o documento existente
+          const participanteExistente = participantes.find((p) => p.id === editId);
+          await setDoc(doc(db, "participantes", editId), {
+            nome: formatarCapitalize(nomeVal),
+            telefone: telVal,
+            idade: parseInt(idadeVal, 10),
+            faixaEtaria: classificarFaixaEtaria(idadeVal),
+            dataCadastro: participanteExistente?.dataCadastro || new Date().toISOString(),
+            emailAtrelado: currentUser ? currentUser.email : "desconhecido",
+            uid: currentUser ? currentUser.uid : null,
+            fotoUrl: fotoUrl || participanteExistente?.fotoUrl || null,
+            ip: participanteExistente?.ip || "desconhecido",
+          });
+          exibirToast("Presença atualizada com sucesso! ✏️⚡");
+        } else {
+          // MODO NOVO CADASTRO
+          await addDoc(colecao, {
+            nome: formatarCapitalize(nomeVal),
+            telefone: telVal,
+            idade: parseInt(idadeVal, 10),
+            faixaEtaria: classificarFaixaEtaria(idadeVal),
+            dataCadastro: new Date().toISOString(),
+            emailAtrelado: currentUser ? currentUser.email : "desconhecido",
+            uid: currentUser ? currentUser.uid : null,
+            fotoUrl: fotoUrl,
+            ip: userIp,
+          });
+          exibirToast("Presença confirmada no Corre! Corre de Cria ⚡");
+        }
         formPresenca.reset();
         if (inputFoto) inputFoto.value = "";
         if (fotoPreview) fotoPreview.classList.add("hidden");
@@ -384,6 +483,8 @@ document.addEventListener("DOMContentLoaded", () => {
     renderizarListaPublica(filtrados);
     publicTotalCount.textContent = participantes.length;
     if (isAdminUnlocked) renderizarPainelAdmin();
+    // Re-verifica presença do usuário logado sempre que a lista atualizar
+    if (currentUser) verificarPresencaUsuario(currentUser.uid);
   }
 
   function renderizarListaPublica(lista) {
