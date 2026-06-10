@@ -183,6 +183,20 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   const btnSaveDevSettings = document.getElementById("btn-save-dev-settings");
 
+  // SELETORES DO AVISO
+  const noticeSectionCard = document.getElementById("notice-section-card");
+  const noticeTextDisplay = document.getElementById("notice-text-display");
+  const noticeImageDisplay = document.getElementById("notice-image-display");
+  const noticeImageWrapper = document.getElementById("notice-image-wrapper");
+  const devNoticeEnabled = document.getElementById("dev-notice-enabled");
+  const devNoticeText = document.getElementById("dev-notice-text");
+  const devNoticeImageFile = document.getElementById("dev-notice-image-file");
+  const devNoticeImageLabel = document.getElementById("dev-notice-image-label");
+  const devNoticeImagePreview = document.getElementById("dev-notice-image-preview");
+  const devNoticeImagePreviewImg = document.getElementById("dev-notice-image-preview-img");
+  const btnSaveNotice = document.getElementById("btn-save-notice");
+  let devNoticeImageBase64 = null; // armazena a imagem carregada em memória
+
   // ==========================================
   // AUTENTICAÇÃO DE USUÁRIO (NOVO)
   // ==========================================
@@ -294,6 +308,52 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarInterface();
   });
 
+  // ==========================================
+  // AVISO — escuta em tempo real o Firestore
+  // ==========================================
+  const noticeDocRef = doc(db, "configuracoes", "aviso");
+  onSnapshot(noticeDocRef, (snap) => {
+    if (!snap.exists()) {
+      noticeSectionCard.classList.add("hidden");
+      return;
+    }
+    const data = snap.data();
+
+    // Atualiza campos do Dev se o painel estiver aberto
+    if (isDevMode) {
+      devNoticeEnabled.checked = !!data.ativo;
+      devNoticeText.value = data.texto || "";
+      // Restaura a imagem salva no preview, se existir
+      if (data.imagemUrl) {
+        devNoticeImageBase64 = data.imagemUrl;
+        devNoticeImagePreviewImg.src = data.imagemUrl;
+        devNoticeImagePreview.classList.remove("hidden");
+        devNoticeImageLabel.textContent = "Imagem carregada ✓";
+      } else {
+        devNoticeImageBase64 = null;
+        devNoticeImagePreview.classList.add("hidden");
+        devNoticeImageLabel.textContent = "Escolher imagem";
+      }
+    }
+
+    // Exibe o card para todos se estiver ativo
+    if (data.ativo) {
+      noticeTextDisplay.textContent = data.texto || "";
+      if (data.imagemUrl) {
+        noticeImageDisplay.src = data.imagemUrl;
+        noticeImageWrapper.style.display = "";
+      } else {
+        noticeImageWrapper.style.display = "none";
+      }
+      noticeSectionCard.classList.remove("hidden");
+    } else {
+      // Esconde para visitantes normais; Dev sempre vê
+      if (!isDevMode) {
+        noticeSectionCard.classList.add("hidden");
+      }
+    }
+  });
+
   // PREVIEW DE FOTO
   inputFoto && inputFoto.addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -309,7 +369,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // MÁSCARAS & VALIDAÇÕES
+  // PREVIEW DA IMAGEM DO AVISO (Dev)
+  devNoticeImageFile && devNoticeImageFile.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        devNoticeImageBase64 = ev.target.result;
+        devNoticeImagePreviewImg.src = ev.target.result;
+        devNoticeImagePreview.classList.remove("hidden");
+        devNoticeImageLabel.textContent = file.name;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      devNoticeImageBase64 = null;
+      devNoticeImagePreview.classList.add("hidden");
+      devNoticeImageLabel.textContent = "Escolher imagem";
+    }
+  });
   inputTelefone.addEventListener("input", (e) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 11) value = value.substring(0, 11);
@@ -582,6 +659,8 @@ document.addEventListener("DOMContentLoaded", () => {
       devPermClear.checked = permClearEnabled;
       devPermExport.checked = permExportEnabled;
       devOrganizerPassInput.value = organizerPassword;
+      // Dev sempre vê o card de aviso (para poder editar)
+      noticeSectionCard.classList.remove("hidden");
       adminPanel.scrollIntoView({ behavior: "smooth" });
       renderizarPainelAdmin();
       exibirToast("Acesso de DESENVOLVEDOR MASTER liberado! 🛠️⚡");
@@ -614,6 +693,10 @@ document.addEventListener("DOMContentLoaded", () => {
     btnToggleAdmin.classList.replace("btn-primary", "btn-secondary-outline");
     adminPanel.classList.add("hidden");
     devSettingsBox.classList.add("hidden");
+    // Esconde o aviso se estiver inativo (só Dev vê quando inativo)
+    if (devNoticeEnabled && !devNoticeEnabled.checked) {
+      noticeSectionCard.classList.add("hidden");
+    }
   }
 
   // PAINEL ADMIN
@@ -908,6 +991,37 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(KEY_PERM_EXPORT, permExportEnabled);
     exibirToast("Permissões salvas! 🛠️💾");
     renderizarPainelAdmin();
+  });
+
+  // SALVAR AVISO (Dev Master)
+  btnSaveNotice.addEventListener("click", async () => {
+    if (!isDevMode) return;
+    const texto = devNoticeText.value.trim();
+    const imagemUrl = devNoticeImageBase64 || null;
+    const ativo = devNoticeEnabled.checked;
+
+    try {
+      await setDoc(doc(db, "configuracoes", "aviso"), {
+        ativo,
+        texto,
+        imagemUrl,
+        atualizadoEm: new Date().toISOString(),
+      });
+
+      // Sempre exibe o card no painel Dev independente do estado
+      noticeTextDisplay.textContent = texto;
+      if (imagemUrl) {
+        noticeImageDisplay.src = imagemUrl;
+        noticeImageWrapper.style.display = "";
+      } else {
+        noticeImageWrapper.style.display = "none";
+      }
+      noticeSectionCard.classList.remove("hidden");
+
+      exibirToast(ativo ? "Aviso publicado para todos! 📢" : "Aviso salvo (oculto para visitantes) 🔒");
+    } catch (err) {
+      alert("Erro ao salvar aviso: " + err.message);
+    }
   });
 
   // LÓGICA DE SORTEIO
