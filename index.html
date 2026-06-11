@@ -1,6 +1,12 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
+    <meta property="og:image" content="https://www.corredecria.com.br/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:title" content="CORRE DE CRIA - Lista de Presença" />
+    <meta property="og:description" content="Confirme sua presença no Corre de Cria toda segunda às 19:40. Beira-Rio ⚡" />
+    <meta property="og:url" content="https://www.corredecria.com.br/" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CORRE DE CRIA - Lista de Presença</title>
@@ -276,6 +282,30 @@
               </div>
 
               <div class="input-group">
+                <label for="input-cidade">Cidade</label>
+                <div class="input-wrapper">
+                  <input
+                    type="text"
+                    id="input-cidade"
+                    placeholder="Ex: Três Rios"
+                    required
+                  />
+                  <span class="input-icon">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                  </span>
+                </div>
+                <span class="error-message" id="error-cidade">Por favor, insira sua cidade.</span>
+              </div>
+
+              <div class="input-group">
                 <label for="input-foto">Foto de Perfil <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">(opcional)</span></label>
                 <label for="input-foto" class="foto-upload-label">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
@@ -312,7 +342,6 @@
               </button>
             </form>
 
-            <!-- Botão editar presença — aparece só para quem já está cadastrado -->
             <div id="edit-presence-area" class="hidden" style="margin-top: 12px;">
               <button id="btn-edit-presence" type="button" class="btn btn-secondary-outline btn-block">
                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -329,6 +358,24 @@
                 </svg>
                 <span>Cancelar minha presença</span>
               </button>
+            </div>
+
+            <!-- AVISO: LISTA PAUSADA (limite de 30 atingido) -->
+            <div id="list-paused-card" class="list-paused-card hidden">
+              <div class="paused-icon-wrapper">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="10" y1="15" x2="10" y2="9"></line>
+                  <line x1="14" y1="15" x2="14" y2="9"></line>
+                </svg>
+              </div>
+              <h3 class="paused-title">Lista pausada no momento ⏸️</h3>
+              <p class="paused-desc">
+                As vagas iniciais foram preenchidas e as inscrições estão
+                <strong>temporariamente pausadas</strong>. Calma, cria: a lista
+                <strong>já irá voltar</strong>! Os organizadores vão liberar
+                novas vagas em breve. Fica de olho aqui que abre de novo. ⚡
+              </p>
             </div>
           </div>
 
@@ -443,10 +490,9 @@
             </div>
           </div>
 
-          <!-- AVISO — visível para todos quando ativado pelo Dev Master -->
           <div id="notice-section-card" class="glass-card notice-card card-glow hidden">
             <div class="notice-header">
-              <svg class="icon-svg title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
                 <line x1="12" y1="8" x2="12" y2="8"></line>
                 <line x1="12" y1="12" x2="12" y2="16"></line>
@@ -511,9 +557,6 @@
               </button>
             </div>
 
-            <!-- ============================================================
-                 CONTROLE DO AVISO — exclusivo do Dev Master
-                 ============================================================ -->
             <div class="dev-notice-section">
               <div class="dev-notice-header">
                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -561,8 +604,7 @@
                 <span>SALVAR E PUBLICAR AVISO</span>
               </button>
             </div>
-            <!-- FIM CONTROLE DO AVISO -->
-          </div>
+            </div>
         </div>
 
         <div class="admin-panel-header">
@@ -644,6 +686,34 @@
           </div>
         </div>
 
+        <!-- CONTROLE DA TRAVA DE 30 INSCRITOS -->
+        <div id="limit-control-section" class="limit-control-section">
+          <div class="limit-control-info">
+            <span id="limit-status-badge" class="limit-status-badge">🛡️</span>
+            <div class="limit-status-texts">
+              <span id="limit-status-title" class="limit-status-title"
+                >Trava automática de 30 ativa</span
+              >
+              <span id="limit-status-desc" class="limit-status-desc"
+                >A lista trava sozinha ao chegar em 30 inscritos.</span
+              >
+            </div>
+          </div>
+          <button id="btn-toggle-limit" class="btn btn-primary">
+            <svg
+              class="icon-svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+            </svg>
+            <span>DESTRAVAR LISTA</span>
+          </button>
+        </div>
+
         <div class="admin-raffle-section">
           <h3 class="admin-table-title" style="margin-bottom: 12px">
             Sorteio de Brindes 🎁
@@ -691,6 +761,15 @@
               </svg>
               <span>BAIXAR RELATÓRIO PDF</span>
             </button>
+            <button id="btn-download-pdf-levy" class="btn btn-primary" style="background-color: #f59e0b; color: #000; border: none;">
+              <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <path d="M12 18v-6"></path>
+                <path d="M9 15l3 3 3-3"></path>
+              </svg>
+              <span>PDF CORRIDA LEVY 🚐</span>
+            </button>
             <button id="btn-clear-all" class="btn btn-danger-outline">
               <svg
                 class="icon-svg"
@@ -717,6 +796,7 @@
               <tr>
                 <th>Nome Completo</th>
                 <th>Telefone</th>
+                <th>Cidade</th>
                 <th>Idade</th>
                 <th>Faixa Etária</th>
                 <th style="width: 100px; text-align: center">Ações</th>
@@ -920,6 +1000,7 @@
             <th>Nº</th>
             <th>Nome Completo</th>
             <th>Telefone (Mascarado)</th>
+            <th>Cidade</th>
             <th>Idade</th>
             <th>Faixa Etária</th>
             <th>Assinatura do Participante</th>
@@ -943,7 +1024,7 @@
       document.getElementById("link-unimed").addEventListener("click", function (e) {
         e.preventDefault();
         const url = this.href;
-        alert("🏃 Dica importante para sua inscrição na corrida da Unimed:\n\n📋 Cupom: CORRE DE CRIA\n👥 Equipe: CORRE DE CRIA\n\nUse essas informações no momento do cadastro!\nVocê será redirecionado agora.");
+        alert("🏃 Dica importante para sua inscrição na corrida da Unimed:\\n\\n📋 Cupom: CORRE DE CRIA\\n👥 Equipe: CORRE DE CRIA\\n\\nUse essas informações no momento do cadastro!\\nVocê será redirecionado agora.");
         window.open(url, "_blank");
       });
     </script>

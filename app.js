@@ -69,6 +69,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let isDevMode = false;
   let currentUser = null; // Armazena o estado de login do usuário atual
 
+  // TRAVA DE INSCRIÇÕES — limite de vagas
+  const LIMITE_INSCRITOS = 30;
+  let listaLiberada = false; // true quando os organizadores destravam (DEFINITIVO: não trava mais)
+
   const KEY_ORGANIZER_PASS = "corre_de_cria_organizer_password";
   const KEY_PERM_CLEAR = "corre_de_cria_perm_clear";
   const KEY_PERM_EXPORT = "corre_de_cria_perm_export";
@@ -132,6 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputNome = document.getElementById("input-nome");
   const inputTelefone = document.getElementById("input-telefone");
   const inputIdade = document.getElementById("input-idade");
+  const inputCidade = document.getElementById("input-cidade");
   const inputFoto = document.getElementById("input-foto");
   const fotoPreview = document.getElementById("foto-preview");
   const fotoPreviewImg = document.getElementById("foto-preview-img");
@@ -163,6 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const countCriaMaster = document.getElementById("count-cria-master");
 
   const btnDownloadPdf = document.getElementById("btn-download-pdf");
+  const btnDownloadPdfLevy = document.getElementById("btn-download-pdf-levy");
   const btnClearAll = document.getElementById("btn-clear-all");
   const adminTableBody = document.getElementById("admin-table-body");
   const adminEmptyMessage = document.getElementById("admin-empty-message");
@@ -197,24 +203,30 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnSaveNotice = document.getElementById("btn-save-notice");
   let devNoticeImageBase64 = null; // armazena a imagem carregada em memória
 
+  // SELETORES DA TRAVA DE 30 INSCRITOS
+  const listPausedCard = document.getElementById("list-paused-card");
+  const limitControlSection = document.getElementById("limit-control-section");
+  const limitStatusBadge = document.getElementById("limit-status-badge");
+  const limitStatusTitle = document.getElementById("limit-status-title");
+  const limitStatusDesc = document.getElementById("limit-status-desc");
+  const btnToggleLimit = document.getElementById("btn-toggle-limit");
+
   // ==========================================
   // AUTENTICAÇÃO DE USUÁRIO (NOVO)
   // ==========================================
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
-      authSection.classList.add("hidden");
-      formPresenca.classList.remove("hidden");
       userInfoText.textContent = `${user.email}`;
 
       // Verifica se o usuário já tem presença cadastrada
       await verificarPresencaUsuario(user.uid);
     } else {
       currentUser = null;
-      authSection.classList.remove("hidden");
-      formPresenca.classList.add("hidden");
       editPresenceArea.classList.add("hidden");
     }
+    // Decide o que mostrar (login, form ou aviso de lista pausada)
+    atualizarAreaInscricao();
   });
 
   // Verifica se o usuário logado já está na lista
@@ -232,6 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
         inputNome.value = existente.nome;
         inputTelefone.value = existente.telefone;
         inputIdade.value = existente.idade;
+        inputCidade.value = existente.cidade || "";
       }
     } else {
       // Ainda não confirmou
@@ -251,6 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
     inputNome.value = existente.nome;
     inputTelefone.value = existente.telefone;
     inputIdade.value = existente.idade;
+    inputCidade.value = existente.cidade || "";
     formPresenca.dataset.editId = existente.id;
 
     // Mostra preview da foto salva, se houver
@@ -354,6 +368,101 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // ==========================================
+  // TRAVA DE 30 INSCRITOS — estado em tempo real
+  // ==========================================
+  const listaConfigRef = doc(db, "configuracoes", "lista");
+  onSnapshot(listaConfigRef, (snap) => {
+    listaLiberada = snap.exists() ? !!snap.data().liberada : false;
+    atualizarAreaInscricao();
+    atualizarStatusLimiteAdmin();
+  });
+
+  function listaEstaTravada() {
+    return !listaLiberada && participantes.length >= LIMITE_INSCRITOS;
+  }
+
+  // Decide o que aparece na área de inscrição: login, formulário ou aviso de pausa
+  function atualizarAreaInscricao() {
+    const travada = listaEstaTravada();
+    const jaInscrito =
+      currentUser && participantes.some((p) => p.uid === currentUser.uid);
+
+    if (travada && !jaInscrito) {
+      // Lista cheia: esconde login/formulário e mostra o aviso de lista pausada
+      authSection.classList.add("hidden");
+      formPresenca.classList.add("hidden");
+      listPausedCard.classList.remove("hidden");
+    } else {
+      // Fluxo normal (quem já está inscrito continua podendo editar a presença)
+      listPausedCard.classList.add("hidden");
+      if (currentUser) {
+        authSection.classList.add("hidden");
+        formPresenca.classList.remove("hidden");
+      } else {
+        authSection.classList.remove("hidden");
+        formPresenca.classList.add("hidden");
+      }
+    }
+  }
+
+  // Feedback visual da trava no painel dos organizadores
+  function atualizarStatusLimiteAdmin() {
+    if (!limitControlSection) return;
+    const total = participantes.length;
+    const btnLabel = btnToggleLimit.querySelector("span");
+
+    limitControlSection.classList.remove("limit-locked", "limit-released");
+
+    if (listaLiberada) {
+      // Destravada em DEFINITIVO: o botão some, fica somente o status
+      limitControlSection.classList.add("limit-released");
+      limitStatusBadge.textContent = "🔓";
+      limitStatusTitle.textContent = "Lista LIBERADA em definitivo";
+      limitStatusDesc.textContent = `${total} inscrito(s) no momento. Inscrições abertas para todos — a trava de ${LIMITE_INSCRITOS} não será reativada.`;
+      btnToggleLimit.classList.add("hidden");
+    } else if (total >= LIMITE_INSCRITOS) {
+      limitControlSection.classList.add("limit-locked");
+      limitStatusBadge.textContent = "🔒";
+      limitStatusTitle.textContent = "Lista TRAVADA — limite de 30 atingido";
+      limitStatusDesc.textContent = `${total}/${LIMITE_INSCRITOS} vagas preenchidas. Os visitantes estão vendo o aviso de lista pausada. O destravamento é definitivo.`;
+      btnToggleLimit.classList.remove("hidden");
+      btnLabel.textContent = "DESTRAVAR LISTA ⚡";
+    } else {
+      limitStatusBadge.textContent = "🛡️";
+      limitStatusTitle.textContent = "Trava automática de 30 ativa";
+      limitStatusDesc.textContent = `${total}/${LIMITE_INSCRITOS} vagas preenchidas. A lista trava sozinha ao chegar em ${LIMITE_INSCRITOS} inscritos.`;
+      btnToggleLimit.classList.remove("hidden");
+      btnLabel.textContent = "DESTRAVAR LISTA";
+    }
+  }
+
+  // BOTÃO DOS ORGANIZADORES — destrava a lista em DEFINITIVO (não trava mais)
+  btnToggleLimit.addEventListener("click", async () => {
+    if (!isAdminUnlocked || listaLiberada) return;
+    if (
+      !confirm(
+        "Destravar a lista?\n\nEsta ação é DEFINITIVA: a trava de 30 não será reativada e as inscrições ficam abertas para todos.",
+      )
+    ) {
+      return;
+    }
+    btnToggleLimit.disabled = true;
+    try {
+      await setDoc(listaConfigRef, {
+        liberada: true,
+        atualizadoEm: new Date().toISOString(),
+      });
+      // Feedback visual somente para quem está no painel (o snapshot
+      // atualiza o restante da interface silenciosamente para os visitantes)
+      exibirToast("Lista destravada em definitivo! Inscrições abertas 🔓⚡");
+    } catch (err) {
+      alert("Erro ao destravar a lista: " + err.message);
+    } finally {
+      btnToggleLimit.disabled = false;
+    }
+  });
+
   // PREVIEW DE FOTO
   inputFoto && inputFoto.addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -446,9 +555,17 @@ document.addEventListener("DOMContentLoaded", () => {
   formPresenca.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    // TRAVA DE 30: bloqueia NOVAS inscrições com a lista travada
+    // (quem já está inscrito continua podendo atualizar os próprios dados)
+    if (!formPresenca.dataset.editId && listaEstaTravada()) {
+      atualizarAreaInscricao(); // troca o formulário pelo aviso de lista pausada
+      return;
+    }
+
     const nomeVal = inputNome.value.trim();
     const telVal = inputTelefone.value.trim();
     const idadeVal = inputIdade.value.trim();
+    const cidadeVal = inputCidade.value.trim();
     let isValido = true;
 
     if (!validarNome(nomeVal)) {
@@ -484,6 +601,13 @@ document.addEventListener("DOMContentLoaded", () => {
       isValido = false;
     } else {
       inputIdade.parentElement.parentElement.classList.remove("invalid");
+    }
+
+    if (!cidadeVal || cidadeVal.length < 2) {
+      inputCidade.parentElement.parentElement.classList.add("invalid");
+      isValido = false;
+    } else {
+      inputCidade.parentElement.parentElement.classList.remove("invalid");
     }
 
     if (isValido) {
@@ -531,6 +655,7 @@ document.addEventListener("DOMContentLoaded", () => {
             nome: formatarCapitalize(nomeVal),
             telefone: telVal,
             idade: parseInt(idadeVal, 10),
+            cidade: formatarCapitalize(cidadeVal),
             faixaEtaria: classificarFaixaEtaria(idadeVal),
             dataCadastro: participanteExistente?.dataCadastro || new Date().toISOString(),
             emailAtrelado: currentUser ? currentUser.email : "desconhecido",
@@ -541,10 +666,16 @@ document.addEventListener("DOMContentLoaded", () => {
           exibirToast("Presença atualizada com sucesso! ✏️⚡");
         } else {
           // MODO NOVO CADASTRO
+          // Reconfere a trava (caso a 30ª vaga tenha sido preenchida enquanto enviava)
+          if (listaEstaTravada()) {
+            atualizarAreaInscricao();
+            return;
+          }
           await addDoc(colecao, {
             nome: formatarCapitalize(nomeVal),
             telefone: telVal,
             idade: parseInt(idadeVal, 10),
+            cidade: formatarCapitalize(cidadeVal),
             faixaEtaria: classificarFaixaEtaria(idadeVal),
             dataCadastro: new Date().toISOString(),
             emailAtrelado: currentUser ? currentUser.email : "desconhecido",
@@ -578,6 +709,9 @@ document.addEventListener("DOMContentLoaded", () => {
   inputIdade.addEventListener("input", () =>
     inputIdade.parentElement.parentElement.classList.remove("invalid"),
   );
+  inputCidade.addEventListener("input", () =>
+    inputCidade.parentElement.parentElement.classList.remove("invalid"),
+  );
 
   // RENDERIZAÇÃO
   function atualizarInterface() {
@@ -590,6 +724,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isAdminUnlocked) renderizarPainelAdmin();
     // Re-verifica presença do usuário logado sempre que a lista atualizar
     if (currentUser) verificarPresencaUsuario(currentUser.uid);
+    // Reavalia a trava de 30 sempre que a lista mudar (trava/destrava em tempo real)
+    atualizarAreaInscricao();
+    atualizarStatusLimiteAdmin();
   }
 
   function renderizarListaPublica(lista) {
@@ -599,17 +736,24 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     publicEmptyMessage.classList.add("hidden");
-    lista.forEach((p) => {
+    lista.forEach((p, index) => {
       const card = document.createElement("div");
       card.className = "runner-card-pub";
       const badgeCompacto = p.faixaEtaria.split(" ")[1] || p.faixaEtaria;
       const avatarHtml = p.fotoUrl
         ? `<img src="${p.fotoUrl}" alt="Foto de ${p.nome}" class="runner-avatar" />`
         : `<div class="runner-avatar-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`;
+      const cidadeHtml = p.cidade
+        ? `<span class="runner-cidade">${p.cidade}</span>`
+        : "";
       card.innerHTML = `
                 <div class="runner-info-left">
+                    <span class="runner-number">${index + 1}</span>
                     ${avatarHtml}
-                    <span class="runner-name">${p.nome}</span>
+                    <div class="runner-name-group">
+                      <span class="runner-name">${p.nome}</span>
+                      ${cidadeHtml}
+                    </div>
                 </div>
                 <span class="runner-badge-age">${badgeCompacto}</span>
             `;
@@ -734,6 +878,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isDevMode) {
       btnDownloadPdf.disabled = false;
       btnDownloadPdf.querySelector("span").textContent = "BAIXAR RELATÓRIO PDF";
+      btnDownloadPdfLevy.disabled = false;
+      btnDownloadPdfLevy.querySelector("span").textContent = "PDF CORRIDA LEVY 🚐";
       btnClearAll.disabled = false;
       btnClearAll.querySelector("span").textContent = "LIMPAR LISTA SEMANAL";
     } else {
@@ -741,6 +887,12 @@ document.addEventListener("DOMContentLoaded", () => {
       btnDownloadPdf.querySelector("span").textContent = permExportEnabled
         ? "BAIXAR RELATÓRIO PDF"
         : "BAIXAR PDF (BLOQUEADO PELO DEV 🔒)";
+      
+      btnDownloadPdfLevy.disabled = !permExportEnabled;
+      btnDownloadPdfLevy.querySelector("span").textContent = permExportEnabled
+        ? "PDF CORRIDA LEVY 🚐"
+        : "PDF LEVY (BLOQUEADO 🔒)";
+
       btnClearAll.disabled = !permClearEnabled;
       btnClearAll.querySelector("span").textContent = permClearEnabled
         ? "LIMPAR LISTA SEMANAL"
@@ -793,6 +945,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <div style="font-size:10px; color:var(--text-muted); font-weight:normal;">${p.emailAtrelado || ""}</div>
                 </td>
                 <td><a href="https://wa.me/55${p.telefone.replace(/\D/g, "")}" target="_blank" class="admin-tel-link">${p.telefone}</a></td>
+                <td>${p.cidade || "-"}</td>
                 <td>${p.idade} anos</td>
                 <td><span class="runner-badge-age" style="display:inline-block;">${p.faixaEtaria}</span></td>
                 ${deleteBtnHtml}
@@ -873,7 +1026,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // PDF
+  // PDF ORIGINAL
   btnDownloadPdf.addEventListener("click", () => {
     if (!isDevMode && !permExportEnabled) {
       alert("⚠️ Bloqueado pelo Dev!");
@@ -902,6 +1055,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td style="font-weight:bold;width:40px;text-align:center;">${index + 1}</td>
                 <td style="font-weight:600;text-transform:uppercase;">${p.nome}</td>
                 <td style="font-family:monospace;font-size:10px;">${mascararTelefone(p.telefone)}</td>
+                <td style="text-align:center;">${p.cidade || "-"}</td>
                 <td style="text-align:center;">${p.idade} anos</td>
                 <td style="font-weight:500;">${p.faixaEtaria}</td>
                 <td style="border-bottom:1px solid #000!important;width:220px;"></td>
@@ -909,6 +1063,71 @@ document.addEventListener("DOMContentLoaded", () => {
       printTableBody.appendChild(tr);
     });
     window.print();
+  });
+
+  // LÓGICA DO PDF EXCLUSIVO PARA LEVY
+  btnDownloadPdfLevy.addEventListener("click", () => {
+    if (!isDevMode && !permExportEnabled) {
+      alert("⚠️ Bloqueado pelo Dev!");
+      return;
+    }
+    if (participantes.length === 0) {
+      alert("Nenhum participante para gerar PDF!");
+      return;
+    }
+
+    // 1. Salva a estrutura original para não quebrar o PDF padrão de segunda-feira
+    const printHeader = document.querySelector(".print-header");
+    const originalHeaderHTML = printHeader.innerHTML;
+    const thTelefone = document.querySelector(".print-table thead th:nth-child(3)");
+    const originalThText = thTelefone.textContent;
+
+    // 2. Substitui o cabeçalho dinamicamente pelo aviso de Levy
+    printHeader.innerHTML = `
+      <h1 class="print-title">CORRE DE CRIA - EDIÇÃO LEVY</h1>
+      <p class="print-subtitle" style="font-weight: 700; font-size: 13px; color: #000; margin-bottom: 15px; border: 2px dashed #000; padding: 12px; border-radius: 6px; text-align: left;">
+        🏃‍♂️ ATENÇÃO, CRIAS! 🏃‍♀️ Domingo, dia 14/06, tem corrida em Levy! São aqueles 5km de sempre! Vamos disponibilizar transporte GRATUITO para a galera, mas as vagas são limitadas. 🚐 Transporte: 2 vans saindo às 07h em ponto da Quadra de Areia. <br>⚠️ Regra: Somente os 30 primeiros da lista garantem a vaga na van. Corre para se inscrever!
+      </p>
+      <div class="print-meta-grid">
+        <div><strong>Data do Corre:</strong> Domingo - 14/06</div>
+        <div><strong>Horário de Saída:</strong> 07:00 em ponto</div>
+        <div><strong>Ponto de Encontro:</strong> Quadra de Areia - Beira-Rio</div>
+        <div><strong>Total de Confirmados:</strong> ${participantes.length}</div>
+      </div>
+    `;
+
+    thTelefone.textContent = "Telefone"; // Remove a indicação "(Mascarado)"
+
+    printDateGenerated.textContent =
+      new Date().toLocaleDateString("pt-BR") + " às " +
+      new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+    printTableBody.innerHTML = "";
+    participantes.forEach((p, index) => {
+      // 3. Destaca visualmente os 30 primeiros (Vaga garantida)
+      const isTop30 = index < 30;
+      const rowBg = isTop30 ? "background-color: #f0fdf4;" : ""; 
+      const vanStatus = isTop30 ? "🚐 Vaga na Van" : "Lista de Espera";
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+                <td style="font-weight:bold;width:40px;text-align:center; ${rowBg}">${index + 1}</td>
+                <td style="font-weight:600;text-transform:uppercase; ${rowBg}">${p.nome}</td>
+                <td style="font-family:monospace;font-size:11px; ${rowBg}">${p.telefone}</td>
+                <td style="text-align:center; ${rowBg}">${p.cidade || "-"}</td>
+                <td style="text-align:center; ${rowBg}">${p.idade} anos</td>
+                <td style="font-weight:500; font-size: 10px; ${rowBg}">${p.faixaEtaria}<br><strong>${vanStatus}</strong></td>
+                <td style="border-bottom:1px solid #000!important;width:150px; ${rowBg}"></td>
+            `;
+      printTableBody.appendChild(tr);
+    });
+
+    // 4. Aciona a janela de impressão
+    window.print();
+
+    // 5. Restaura o DOM original
+    printHeader.innerHTML = originalHeaderHTML;
+    thTelefone.textContent = originalThText;
   });
 
   function formatarData(date) {
@@ -1058,12 +1277,9 @@ document.addEventListener("DOMContentLoaded", () => {
         raffleWinnerDetails.textContent = `${winner.faixaEtaria} • ${winner.telefone}`;
 
         btnDrawRaffle.disabled = false;
-        btnDrawRaffle.querySelector("span").textContent =
-          "SORTEAR OUTRO ATLETA";
-        exibirToast(
-          `Sorteio concluído! ${winner.nome} foi o(a) sorteado(a)! 🎁`,
-        );
+        btnDrawRaffle.querySelector("span").textContent = "SORTEAR NOVAMENTE";
       }
-    }, 70);
+    }, 80);
   });
+
 });
