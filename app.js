@@ -2,14 +2,15 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
   getFirestore,
   collection,
-  addDoc,
   onSnapshot,
-  deleteDoc,
   doc,
   query,
   orderBy,
   getDoc,
+  getDocs,
   setDoc,
+  writeBatch,
+  deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getAuth,
@@ -36,6 +37,24 @@ const provider = new GoogleAuthProvider();
 
 const colecao = collection(db, "participantes");
 const colecaoBans = collection(db, "banned_ips");
+
+// ===== Separação de dados PÚBLICOS x PRIVADOS (LGPD) =====
+// Público (coleção "participantes"): nome, cidade, idade, faixa etária, foto,
+//   uid e telefone MASCARADO — é só o que a lista aberta precisa.
+// Privado (subcoleção "participantes/<id>/privado/dados"): telefone completo,
+//   e-mail e IP — apenas o próprio dono e os admins (coleção "admins")
+//   conseguem ler, garantido pelas REGRAS de segurança do Firestore.
+function privadoRef(participanteId) {
+  return doc(db, "participantes", participanteId, "privado", "dados");
+}
+// Índice "indices_telefone/<numero>" com { uid }: serve só para impedir
+// cadastro duplicado sem precisar baixar o telefone de ninguém.
+function indiceTelefoneRef(telefoneLimpo) {
+  return doc(db, "indices_telefone", telefoneLimpo);
+}
+function limparTelefone(tel) {
+  return (tel || "").replace(/\D/g, "");
+}
 
 // Comprime imagem para base64 usando Canvas (~150x150px, qualidade 0.7)
 function comprimirFotoParaBase64(file) {
@@ -68,6 +87,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let isAdminUnlocked = false;
   let isDevMode = false;
   let currentUser = null; // Armazena o estado de login do usuário atual
+
+  // Controle de acesso aos dados privados (telefone, e-mail, IP)
+  let isRealAdmin = false; // a conta Google logada consta na coleção "admins" do Firestore
+  let dadosPrivados = {}; // cache p/ admins: id do participante -> { telefone, email, ip }
+  let meusDadosPrivados = null; // dados privados do PRÓPRIO usuário logado
 
   // TRAVA DE INSCRIÇÕES — limite de vagas
   const LIMITE_INSCRITOS = 30;
@@ -172,6 +196,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnClearAll = document.getElementById("btn-clear-all");
   const adminTableBody = document.getElementById("admin-table-body");
   const adminEmptyMessage = document.getElementById("admin-empty-message");
+  const adminPrivateWarning = document.getElementById("admin-private-warning");
+  const btnMigrarPrivacidade = document.getElementById("btn-migrar-privacidade");
 
   const printDateToday = document.getElementById("print-date-today");
   const printTotalCount = document.getElementById("print-total-count");
@@ -219,11 +245,22 @@ document.addEventListener("DOMContentLoaded", () => {
       currentUser = user;
       userInfoText.textContent = `${user.email}`;
 
+      // Confere se esta conta Google está na coleção "admins" do Firestore
+      await verificarAdminReal(user.uid);
+
       // Verifica se o usuário já tem presença cadastrada
       await verificarPresencaUsuario(user.uid);
     } else {
       currentUser = null;
+      isRealAdmin = false;
+      dadosPrivados = {};
+      meusDadosPrivados = null;
       editPresenceArea.classList.add("hidden");
+    }
+    // Painel aberto? Recarrega a tabela (mostra/esconde os dados privados)
+    if (isAdminUnlocked) {
+      renderizarPainelAdmin();
+      carregarDadosPrivadosAdmin();
     }
     // Decide o que mostrar (login, form ou aviso de lista pausada)
     atualizarAreaInscricao();
@@ -238,11 +275,16 @@ document.addEventListener("DOMContentLoaded", () => {
       // Já confirmou — mostra botões de editar/cancelar
       editPresenceArea.classList.remove("hidden");
       formPresenca.dataset.editId = existente.id;
+      // Busca os dados privados do PRÓPRIO usuário (telefone) p/ preencher o form
+      await carregarMeusDadosPrivados(existente.id);
       if (!estaEditando) {
         // Só preenche o form automaticamente se não estava editando
         btnSubmit.querySelector("span").textContent = "ATUALIZAR PRESENÇA";
         inputNome.value = existente.nome;
-        inputTelefone.value = existente.telefone;
+        inputTelefone.value =
+          (meusDadosPrivados && meusDadosPrivados.telefone) ||
+          existente.telefone || // fallback p/ cadastros antigos (pré-migração)
+          "";
         inputIdade.value = existente.idade;
         inputCidade.value = existente.cidade || "";
       }
@@ -255,14 +297,20 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Botão editar — repopula os campos com os dados salvos do usuário
-  btnEditPresence.addEventListener("click", () => {
+  btnEditPresence.addEventListener("click", async () => {
     if (!currentUser) return;
     const existente = participantes.find((p) => p.uid === currentUser.uid);
     if (!existente) return;
 
+    // Garante que os dados privados (telefone) do usuário estão carregados
+    await carregarMeusDadosPrivados(existente.id);
+
     // Preenche os campos com os dados anteriores
     inputNome.value = existente.nome;
-    inputTelefone.value = existente.telefone;
+    inputTelefone.value =
+      (meusDadosPrivados && meusDadosPrivados.telefone) ||
+      existente.telefone || // fallback p/ cadastros antigos (pré-migração)
+      "";
     inputIdade.value = existente.idade;
     inputCidade.value = existente.cidade || "";
     formPresenca.dataset.editId = existente.id;
@@ -286,16 +334,39 @@ document.addEventListener("DOMContentLoaded", () => {
   // Botão cancelar presença
   btnCancelPresence.addEventListener("click", async () => {
     const editId = formPresenca.dataset.editId;
-    if (!editId) return;
+    if (!editId || !currentUser) return;
     if (confirm("Deseja cancelar sua presença no Corre de Cria?")) {
-      await deleteDoc(doc(db, "participantes", editId));
-      delete formPresenca.dataset.editId;
-      formPresenca.reset();
-      if (inputFoto) inputFoto.value = "";
-      if (fotoPreview) fotoPreview.classList.add("hidden");
-      editPresenceArea.classList.add("hidden");
-      btnSubmit.querySelector("span").textContent = "CONFIRMAR NO CORRE";
-      exibirToast("Presença cancelada. Até a próxima! 👋");
+      try {
+        const existente = participantes.find((p) => p.id === editId);
+        await carregarMeusDadosPrivados(editId, true);
+        const telefoneAntigo = limparTelefone(
+          (meusDadosPrivados && meusDadosPrivados.telefone) ||
+            (existente && existente.telefone) ||
+            "",
+        );
+
+        const batch = writeBatch(db);
+        batch.delete(doc(db, "participantes", editId));
+        // Apaga também os dados privados (se existirem)
+        if (meusDadosPrivados) batch.delete(privadoRef(editId));
+        // Libera o telefone no índice anti-duplicidade
+        if (telefoneAntigo) {
+          const refIndice = await refIndiceTelefoneApagavel(telefoneAntigo);
+          if (refIndice) batch.delete(refIndice);
+        }
+        await batch.commit();
+
+        meusDadosPrivados = null;
+        delete formPresenca.dataset.editId;
+        formPresenca.reset();
+        if (inputFoto) inputFoto.value = "";
+        if (fotoPreview) fotoPreview.classList.add("hidden");
+        editPresenceArea.classList.add("hidden");
+        btnSubmit.querySelector("span").textContent = "CONFIRMAR NO CORRE";
+        exibirToast("Presença cancelada. Até a próxima! 👋");
+      } catch (err) {
+        alert("Erro ao cancelar presença: " + err.message);
+      }
     }
   });
 
@@ -440,6 +511,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // BOTÃO DOS ORGANIZADORES — destrava a lista em DEFINITIVO (não trava mais)
   btnToggleLimit.addEventListener("click", async () => {
     if (!isAdminUnlocked || listaLiberada) return;
+    if (!exigirAdminReal("destravar a lista")) return;
     if (
       !confirm(
         "Destravar a lista?\n\nEsta ação é DEFINITIVA: a trava de 30 não será reativada e as inscrições ficam abertas para todos.",
@@ -520,11 +592,124 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function mascararTelefone(tel) {
+    if (!tel) return "—";
     const d = tel.replace(/\D/g, "");
     if (d.length === 11)
       return `(${d.substring(0, 2)}) *****-${d.substring(7)}`;
     if (d.length === 10) return `(${d.substring(0, 2)}) ****-${d.substring(6)}`;
     return tel;
+  }
+
+  // ==========================================
+  // ACESSO AOS DADOS PRIVADOS (telefone/e-mail/IP)
+  // ==========================================
+
+  // A conta logada está na coleção "admins"? (é isso que as REGRAS checam)
+  async function verificarAdminReal(uid) {
+    try {
+      const snap = await getDoc(doc(db, "admins", uid));
+      isRealAdmin = snap.exists();
+    } catch (err) {
+      isRealAdmin = false;
+    }
+  }
+
+  // Carrega (com cache) os dados privados do PRÓPRIO usuário logado
+  async function carregarMeusDadosPrivados(participanteId, forcar = false) {
+    if (
+      !forcar &&
+      meusDadosPrivados &&
+      meusDadosPrivados._id === participanteId
+    ) {
+      return meusDadosPrivados;
+    }
+    try {
+      const snap = await getDoc(privadoRef(participanteId));
+      meusDadosPrivados = snap.exists()
+        ? { _id: participanteId, ...snap.data() }
+        : null;
+    } catch (err) {
+      // Cadastro antigo ainda sem área privada (pré-migração) ou sem permissão
+      meusDadosPrivados = null;
+    }
+    return meusDadosPrivados;
+  }
+
+  // Retorna a ref do índice de telefone SE ele existir e o usuário puder apagá-lo
+  async function refIndiceTelefoneApagavel(telefoneLimpo) {
+    if (!telefoneLimpo || !currentUser) return null;
+    try {
+      const snap = await getDoc(indiceTelefoneRef(telefoneLimpo));
+      if (
+        snap.exists() &&
+        (isRealAdmin || snap.data().uid === currentUser.uid)
+      ) {
+        return snap.ref;
+      }
+    } catch (err) {
+      /* índice inacessível: ignora */
+    }
+    return null;
+  }
+
+  // (Admins) Busca os dados privados de todos os participantes p/ o painel
+  async function carregarDadosPrivadosAdmin() {
+    if (!isAdminUnlocked || !isRealAdmin || !currentUser) return;
+    // Remove do cache quem saiu da lista
+    const idsAtuais = new Set(participantes.map((p) => p.id));
+    Object.keys(dadosPrivados).forEach((id) => {
+      if (!idsAtuais.has(id)) delete dadosPrivados[id];
+    });
+    // Busca só o que falta ou o que mudou (ex.: participante editou o telefone)
+    const pendentes = participantes.filter((p) => {
+      const cache = dadosPrivados[p.id];
+      if (!cache) return true;
+      return (
+        p.telefoneMascarado &&
+        cache.telefone &&
+        mascararTelefone(cache.telefone) !== p.telefoneMascarado
+      );
+    });
+    if (pendentes.length === 0) return;
+    await Promise.all(
+      pendentes.map(async (p) => {
+        try {
+          const snap = await getDoc(privadoRef(p.id));
+          if (snap.exists()) dadosPrivados[p.id] = snap.data();
+        } catch (err) {
+          /* sem permissão ou doc inexistente: segue sem os dados */
+        }
+      }),
+    );
+    if (isAdminUnlocked) renderizarTabelaAdmin();
+  }
+
+  // Acessores com fallback p/ cadastros antigos (campos ainda no doc público)
+  function obterTelefone(p) {
+    const priv = dadosPrivados[p.id];
+    return (priv && priv.telefone) || p.telefone || null;
+  }
+  function obterTelefoneMascarado(p) {
+    const tel = obterTelefone(p);
+    if (tel) return mascararTelefone(tel);
+    return p.telefoneMascarado || "—";
+  }
+  function obterEmail(p) {
+    const priv = dadosPrivados[p.id];
+    return (priv && priv.email) || p.emailAtrelado || "";
+  }
+  function obterIp(p) {
+    const priv = dadosPrivados[p.id];
+    return (priv && priv.ip) || p.ip || "";
+  }
+
+  // Ações que dependem das regras exigem conta Google na coleção "admins"
+  function exigirAdminReal(acao) {
+    if (currentUser && isRealAdmin) return true;
+    alert(
+      `Para ${acao}, entre no site com uma conta Google cadastrada na coleção "admins" do Firestore.`,
+    );
+    return false;
   }
 
   function validarNome(nome) {
@@ -551,9 +736,14 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/(^\w{1})|(\s+\w{1})/g, (l) => l.toUpperCase());
   }
 
-  // SUBMISSÃO — salva no Firestore
+  // SUBMISSÃO — salva no Firestore (dados públicos e privados SEPARADOS)
   formPresenca.addEventListener("submit", async (e) => {
     e.preventDefault();
+
+    if (!currentUser) {
+      alert("Faça login para confirmar presença.");
+      return;
+    }
 
     // TRAVA DE 30: bloqueia NOVAS inscrições com a lista travada
     // (quem já está inscrito continua podendo atualizar os próprios dados)
@@ -581,19 +771,7 @@ document.addEventListener("DOMContentLoaded", () => {
       inputTelefone.parentElement.parentElement.classList.add("invalid");
       isValido = false;
     } else {
-      const telLimpo = telVal.replace(/\D/g, "");
-      const editId = formPresenca.dataset.editId;
-      const telExistente = participantes.some(
-        (p) => p.telefone.replace(/\D/g, "") === telLimpo && p.id !== editId,
-      );
-      if (telExistente) {
-        errorTelefone.textContent =
-          "Este número já confirmou presença para o corre!";
-        inputTelefone.parentElement.parentElement.classList.add("invalid");
-        isValido = false;
-      } else {
-        inputTelefone.parentElement.parentElement.classList.remove("invalid");
-      }
+      inputTelefone.parentElement.parentElement.classList.remove("invalid");
     }
 
     if (!validarIdade(idadeVal)) {
@@ -615,6 +793,25 @@ document.addEventListener("DOMContentLoaded", () => {
       btnSubmit.querySelector("span").textContent = "VALIDANDO E ENVIANDO...";
 
       try {
+        const editId = formPresenca.dataset.editId;
+        const telLimpo = limparTelefone(telVal);
+
+        // Checa duplicidade pelo ÍNDICE de telefones (uma consulta pontual,
+        // sem baixar o telefone de ninguém)
+        try {
+          const idxSnap = await getDoc(indiceTelefoneRef(telLimpo));
+          if (idxSnap.exists() && idxSnap.data().uid !== currentUser.uid) {
+            errorTelefone.textContent =
+              "Este número já confirmou presença para o corre!";
+            inputTelefone.parentElement.parentElement.classList.add("invalid");
+            return;
+          }
+        } catch (err) {
+          console.warn(
+            "Não foi possível checar duplicidade de telefone. Prosseguindo...",
+          );
+        }
+
         // Tenta pegar o IP para proteção contra trolls
         let userIp = "desconhecido";
         try {
@@ -633,8 +830,6 @@ document.addEventListener("DOMContentLoaded", () => {
             alert(
               "⚠️ AÇÃO BLOQUEADA: Seu acesso foi permanentemente restrito pelos organizadores por comportamento inadequado.",
             );
-            btnSubmit.disabled = false;
-            btnSubmit.querySelector("span").textContent = "CONFIRMAR NO CORRE";
             return;
           }
         }
@@ -646,23 +841,50 @@ document.addEventListener("DOMContentLoaded", () => {
           fotoUrl = await comprimirFotoParaBase64(fotoFile);
         }
 
-        const editId = formPresenca.dataset.editId;
-
         if (editId) {
-          // MODO EDIÇÃO — atualiza o documento existente
-          const participanteExistente = participantes.find((p) => p.id === editId);
-          await setDoc(doc(db, "participantes", editId), {
+          // MODO EDIÇÃO — atualiza público + privado numa única operação atômica
+          const participanteExistente = participantes.find(
+            (p) => p.id === editId,
+          );
+          await carregarMeusDadosPrivados(editId, true);
+
+          const telefoneAntigo = limparTelefone(
+            (meusDadosPrivados && meusDadosPrivados.telefone) ||
+              (participanteExistente && participanteExistente.telefone) ||
+              "",
+          );
+
+          const batch = writeBatch(db);
+          // Documento PÚBLICO: sem telefone, e-mail nem IP
+          batch.set(doc(db, "participantes", editId), {
             nome: formatarCapitalize(nomeVal),
-            telefone: telVal,
             idade: parseInt(idadeVal, 10),
             cidade: formatarCapitalize(cidadeVal),
             faixaEtaria: classificarFaixaEtaria(idadeVal),
-            dataCadastro: participanteExistente?.dataCadastro || new Date().toISOString(),
-            emailAtrelado: currentUser ? currentUser.email : "desconhecido",
-            uid: currentUser ? currentUser.uid : null,
+            dataCadastro:
+              participanteExistente?.dataCadastro || new Date().toISOString(),
+            uid: currentUser.uid,
             fotoUrl: fotoUrl || participanteExistente?.fotoUrl || null,
-            ip: participanteExistente?.ip || "desconhecido",
+            telefoneMascarado: mascararTelefone(telVal),
           });
+          // Documento PRIVADO: só o dono e os admins leem (regras do Firestore)
+          batch.set(privadoRef(editId), {
+            telefone: telVal,
+            email: currentUser.email || "desconhecido",
+            ip:
+              (meusDadosPrivados && meusDadosPrivados.ip) ||
+              participanteExistente?.ip ||
+              userIp,
+            uid: currentUser.uid,
+          });
+          // Atualiza o índice anti-duplicidade se o telefone mudou
+          if (telefoneAntigo && telefoneAntigo !== telLimpo) {
+            const refAntigo = await refIndiceTelefoneApagavel(telefoneAntigo);
+            if (refAntigo) batch.delete(refAntigo);
+          }
+          batch.set(indiceTelefoneRef(telLimpo), { uid: currentUser.uid });
+          await batch.commit();
+          meusDadosPrivados = null; // força recarregar os dados atualizados
           exibirToast("Presença atualizada com sucesso! ✏️⚡");
         } else {
           // MODO NOVO CADASTRO
@@ -671,18 +893,28 @@ document.addEventListener("DOMContentLoaded", () => {
             atualizarAreaInscricao();
             return;
           }
-          await addDoc(colecao, {
+          const novoRef = doc(colecao); // gera um ID novo p/ usar no batch
+          const batch = writeBatch(db);
+          // Documento PÚBLICO: sem telefone, e-mail nem IP
+          batch.set(novoRef, {
             nome: formatarCapitalize(nomeVal),
-            telefone: telVal,
             idade: parseInt(idadeVal, 10),
             cidade: formatarCapitalize(cidadeVal),
             faixaEtaria: classificarFaixaEtaria(idadeVal),
             dataCadastro: new Date().toISOString(),
-            emailAtrelado: currentUser ? currentUser.email : "desconhecido",
-            uid: currentUser ? currentUser.uid : null,
+            uid: currentUser.uid,
             fotoUrl: fotoUrl,
-            ip: userIp,
+            telefoneMascarado: mascararTelefone(telVal),
           });
+          // Documento PRIVADO: só o dono e os admins leem (regras do Firestore)
+          batch.set(privadoRef(novoRef.id), {
+            telefone: telVal,
+            email: currentUser.email || "desconhecido",
+            ip: userIp,
+            uid: currentUser.uid,
+          });
+          batch.set(indiceTelefoneRef(telLimpo), { uid: currentUser.uid });
+          await batch.commit();
           exibirToast("Presença confirmada no Corre! Corre de Cria ⚡");
         }
         formPresenca.reset();
@@ -721,7 +953,10 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     renderizarListaPublica(filtrados);
     publicTotalCount.textContent = participantes.length;
-    if (isAdminUnlocked) renderizarPainelAdmin();
+    if (isAdminUnlocked) {
+      renderizarPainelAdmin();
+      carregarDadosPrivadosAdmin();
+    }
     // Re-verifica presença do usuário logado sempre que a lista atualizar
     if (currentUser) verificarPresencaUsuario(currentUser.uid);
     // Reavalia a trava de 30 sempre que a lista mudar (trava/destrava em tempo real)
@@ -807,6 +1042,7 @@ document.addEventListener("DOMContentLoaded", () => {
       noticeSectionCard.classList.remove("hidden");
       adminPanel.scrollIntoView({ behavior: "smooth" });
       renderizarPainelAdmin();
+      carregarDadosPrivadosAdmin();
       exibirToast("Acesso de DESENVOLVEDOR MASTER liberado! 🛠️⚡");
     } else if (senha === organizerPassword) {
       isAdminUnlocked = true;
@@ -818,6 +1054,7 @@ document.addEventListener("DOMContentLoaded", () => {
       devSettingsBox.classList.add("hidden");
       adminPanel.scrollIntoView({ behavior: "smooth" });
       renderizarPainelAdmin();
+      carregarDadosPrivadosAdmin();
       exibirToast("Painel de Organizadores liberado! 🔒🔑");
     } else {
       errorAdminPassword.classList.remove("hidden");
@@ -910,6 +1147,15 @@ document.addEventListener("DOMContentLoaded", () => {
       thAcoes.style.display = isDevMode ? "table-cell" : "none";
     }
 
+    // Aviso quando o admin do painel não tem acesso aos dados privados
+    if (adminPrivateWarning) {
+      if (isRealAdmin || participantes.length === 0) {
+        adminPrivateWarning.classList.add("hidden");
+      } else {
+        adminPrivateWarning.classList.remove("hidden");
+      }
+    }
+
     if (participantes.length === 0) {
       adminEmptyMessage.classList.remove("hidden");
       return;
@@ -923,7 +1169,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const deleteBtnHtml = isDevMode
         ? `
                 <td style="text-align: center; display: flex; justify-content: center; gap: 6px;">
-                    <button class="btn-ban-row" data-id="${p.id}" data-ip="${p.ip || ""}" data-nome="${p.nome}" title="Banir e Bloquear IP do participante">
+                    <button class="btn-ban-row" data-id="${p.id}" title="Banir e Bloquear IP do participante">
                         <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
@@ -939,12 +1185,18 @@ document.addEventListener("DOMContentLoaded", () => {
             `
         : "";
 
+      // Telefone: completo (admin real) ou mascarado (campo público)
+      const telCompleto = obterTelefone(p);
+      const telHtml = telCompleto
+        ? `<a href="https://wa.me/55${telCompleto.replace(/\D/g, "")}" target="_blank" class="admin-tel-link">${telCompleto}</a>`
+        : `<span title="Disponível apenas para contas autorizadas (coleção admins)">${p.telefoneMascarado || "—"} 🔒</span>`;
+
       tr.innerHTML = `
                 <td style="font-weight: 600;">
                   ${p.nome}
-                  <div style="font-size:10px; color:var(--text-muted); font-weight:normal;">${p.emailAtrelado || ""}</div>
+                  <div style="font-size:10px; color:var(--text-muted); font-weight:normal;">${obterEmail(p) || ""}</div>
                 </td>
-                <td><a href="https://wa.me/55${p.telefone.replace(/\D/g, "")}" target="_blank" class="admin-tel-link">${p.telefone}</a></td>
+                <td>${telHtml}</td>
                 <td>${p.cidade || "-"}</td>
                 <td>${p.idade} anos</td>
                 <td><span class="runner-badge-age" style="display:inline-block;">${p.faixaEtaria}</span></td>
@@ -960,9 +1212,14 @@ document.addEventListener("DOMContentLoaded", () => {
           const id = e.currentTarget.getAttribute("data-id");
           const p = participantes.find((part) => part.id === id);
           if (!p) return;
+          if (!exigirAdminReal("excluir participantes")) return;
           if (confirm(`Deseja mesmo remover "${p.nome}" da lista?`)) {
-            await deleteDoc(doc(db, "participantes", id));
-            exibirToast("Participante removido com sucesso.");
+            try {
+              await removerParticipante(p);
+              exibirToast("Participante removido com sucesso.");
+            } catch (err) {
+              alert("Erro ao remover: " + err.message);
+            }
           }
         });
       });
@@ -971,32 +1228,39 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll(".btn-ban-row").forEach((btn) => {
         btn.addEventListener("click", async (e) => {
           const id = e.currentTarget.getAttribute("data-id");
-          const ipRaw = e.currentTarget.getAttribute("data-ip");
-          const nomeStr = e.currentTarget.getAttribute("data-nome");
+          const p = participantes.find((part) => part.id === id);
+          if (!p) return;
+          if (!exigirAdminReal("banir participantes")) return;
 
+          const ipRaw = obterIp(p);
           if (!ipRaw || ipRaw === "desconhecido" || ipRaw.trim() === "") {
             alert(
-              `Não foi possível resgatar o IP de ${nomeStr}. Você só pode excluí-lo normalmente.`,
+              isRealAdmin
+                ? `Não foi possível resgatar o IP de ${p.nome}. Você só pode excluí-lo normalmente.`
+                : `O IP de ${p.nome} é um dado privado. Entre com uma conta Google cadastrada na coleção "admins" para conseguir banir.`,
             );
             return;
           }
 
           if (
             confirm(
-              `⚠️ ALERTA DE BANIMENTO ⚠️\n\nDeseja banir o IP de "${nomeStr}" PERMANENTEMENTE? Ele nunca mais conseguirá se inscrever.`,
+              `⚠️ ALERTA DE BANIMENTO ⚠️\n\nDeseja banir o IP de "${p.nome}" PERMANENTEMENTE? Ele nunca mais conseguirá se inscrever.`,
             )
           ) {
             try {
               const ipSanitizado = ipRaw.replace(/\//g, "_");
+              const batch = writeBatch(db);
               // 1. Registra o IP na coleção de banidos
-              await setDoc(doc(db, "banned_ips", ipSanitizado), {
-                nomeBanned: nomeStr,
+              batch.set(doc(db, "banned_ips", ipSanitizado), {
+                nomeBanned: p.nome,
                 dataBan: new Date().toISOString(),
               });
-              // 2. Remove o desordeiro da lista de participantes atuais
-              await deleteDoc(doc(db, "participantes", id));
+              // 2. Remove o desordeiro (público + privado + índice)
+              adicionarExclusaoAoBatch(batch, p);
+              await batch.commit();
+              delete dadosPrivados[p.id];
 
-              exibirToast(`🚫 IP de ${nomeStr} banido com sucesso!`);
+              exibirToast(`🚫 IP de ${p.nome} banido com sucesso!`);
             } catch (err) {
               alert("Erro ao aplicar banimento: " + err.message);
             }
@@ -1004,6 +1268,25 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       });
     }
+  }
+
+  // Monta a exclusão completa de um participante num batch (doc público + privado + índice)
+  function adicionarExclusaoAoBatch(batch, p) {
+    batch.delete(doc(db, "participantes", p.id));
+    // Admin real pode deletar mesmo que não exista (erro é absorvido pelas regras)
+    batch.delete(privadoRef(p.id));
+    const tel = obterTelefone(p);
+    if (tel) {
+      const telLimpo = limparTelefone(tel);
+      if (telLimpo) batch.delete(indiceTelefoneRef(telLimpo));
+    }
+  }
+
+  async function removerParticipante(p) {
+    const batch = writeBatch(db);
+    adicionarExclusaoAoBatch(batch, p);
+    await batch.commit();
+    delete dadosPrivados[p.id];
   }
 
   // LIMPAR LISTA
@@ -1016,12 +1299,33 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("A lista já está vazia!");
       return;
     }
+    if (!exigirAdminReal("limpar a lista")) return;
     if (confirm("⚠️ Apagar TODOS os confirmados?")) {
       if (confirm("Confirmar limpeza definitiva? (Não pode ser desfeita)")) {
-        for (const p of participantes) {
-          await deleteDoc(doc(db, "participantes", p.id));
+        try {
+          // Junta tudo que precisa sumir: docs públicos, privados e índices de telefone
+          const refs = [];
+          for (const p of participantes) {
+            refs.push(doc(db, "participantes", p.id));
+            refs.push(privadoRef(p.id));
+          }
+          try {
+            const idxSnap = await getDocs(collection(db, "indices_telefone"));
+            idxSnap.forEach((d) => refs.push(d.ref));
+          } catch (e) {
+            console.warn("Não foi possível listar índices de telefone:", e);
+          }
+          // Commits em lotes (limite do Firestore: 500 operações por batch)
+          for (let i = 0; i < refs.length; i += 400) {
+            const batch = writeBatch(db);
+            refs.slice(i, i + 400).forEach((r) => batch.delete(r));
+            await batch.commit();
+          }
+          dadosPrivados = {};
+          exibirToast("Lista reiniciada com sucesso! ⚡");
+        } catch (err) {
+          alert("Erro ao limpar a lista: " + err.message);
         }
-        exibirToast("Lista reiniciada com sucesso! ⚡");
       }
     }
   });
@@ -1054,7 +1358,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tr.innerHTML = `
                 <td style="font-weight:bold;width:40px;text-align:center;">${index + 1}</td>
                 <td style="font-weight:600;text-transform:uppercase;">${p.nome}</td>
-                <td style="font-family:monospace;font-size:10px;">${mascararTelefone(p.telefone)}</td>
+                <td style="font-family:monospace;font-size:10px;">${obterTelefoneMascarado(p)}</td>
                 <td style="text-align:center;">${p.cidade || "-"}</td>
                 <td style="text-align:center;">${p.idade} anos</td>
                 <td style="font-weight:500;">${p.faixaEtaria}</td>
@@ -1113,7 +1417,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tr.innerHTML = `
                 <td style="font-weight:bold;width:40px;text-align:center; ${rowBg}">${index + 1}</td>
                 <td style="font-weight:600;text-transform:uppercase; ${rowBg}">${p.nome}</td>
-                <td style="font-family:monospace;font-size:11px; ${rowBg}">${p.telefone}</td>
+                <td style="font-family:monospace;font-size:11px; ${rowBg}">${obterTelefone(p) || p.telefoneMascarado || "—"}</td>
                 <td style="text-align:center; ${rowBg}">${p.cidade || "-"}</td>
                 <td style="text-align:center; ${rowBg}">${p.idade} anos</td>
                 <td style="font-weight:500; font-size: 10px; ${rowBg}">${p.faixaEtaria}<br><strong>${vanStatus}</strong></td>
@@ -1212,9 +1516,81 @@ document.addEventListener("DOMContentLoaded", () => {
     renderizarPainelAdmin();
   });
 
+  // MIGRAÇÃO DE PRIVACIDADE (Dev Master + admin real)
+  // Move telefone/e-mail/IP dos docs públicos para participantes/<id>/privado/dados.
+  // Rodar UMA vez após publicar as novas regras do Firestore.
+  btnMigrarPrivacidade &&
+    btnMigrarPrivacidade.addEventListener("click", async () => {
+      if (!isDevMode) return;
+      if (!exigirAdminReal("migrar os dados sensíveis")) return;
+      if (
+        !confirm(
+          "Migrar dados sensíveis?\n\nTelefone, e-mail e IP de cada participante serão movidos para a subcoleção privada (e removidos do documento público). Rode isto UMA vez, depois de publicar as novas regras do Firestore.",
+        )
+      ) {
+        return;
+      }
+
+      const labelSpan = btnMigrarPrivacidade.querySelector("span");
+      const labelOriginal = labelSpan ? labelSpan.textContent : "";
+      btnMigrarPrivacidade.disabled = true;
+      if (labelSpan) labelSpan.textContent = "MIGRANDO...";
+
+      let migrados = 0;
+      let jaOk = 0;
+      try {
+        for (const p of participantes) {
+          const temSensivel =
+            "telefone" in p || "emailAtrelado" in p || "ip" in p;
+          if (!temSensivel) {
+            jaOk++;
+            continue;
+          }
+
+          const batch = writeBatch(db);
+          batch.set(
+            privadoRef(p.id),
+            {
+              telefone: p.telefone || null,
+              email: p.emailAtrelado || null,
+              ip: p.ip || null,
+              uid: p.uid || null,
+            },
+            { merge: true },
+          );
+          batch.update(doc(db, "participantes", p.id), {
+            telefone: deleteField(),
+            emailAtrelado: deleteField(),
+            ip: deleteField(),
+            telefoneMascarado: mascararTelefone(p.telefone),
+          });
+          const telLimpo = limparTelefone(p.telefone);
+          if (telLimpo) {
+            batch.set(indiceTelefoneRef(telLimpo), { uid: p.uid || null });
+          }
+          await batch.commit();
+          migrados++;
+        }
+
+        alert(
+          `Migração concluída! ✅\n\n• Migrados agora: ${migrados}\n• Já estavam ok: ${jaOk}\n\nPara conferir: abra o site numa guia anônima, F12 → aba Network/Rede, e verifique que os documentos de participantes não trazem mais telefone, e-mail nem IP — só o "telefoneMascarado".`,
+        );
+        carregarDadosPrivadosAdmin();
+      } catch (err) {
+        alert(
+          `Erro durante a migração (${migrados} já migrados): ${err.message}\n\nVocê pode clicar de novo — quem já foi migrado será pulado.`,
+        );
+      } finally {
+        btnMigrarPrivacidade.disabled = false;
+        if (labelSpan)
+          labelSpan.textContent = labelOriginal || "MIGRAR DADOS SENSÍVEIS 🔐";
+      }
+    });
+
   // SALVAR AVISO (Dev Master)
   btnSaveNotice.addEventListener("click", async () => {
     if (!isDevMode) return;
+    if (!exigirAdminReal("salvar o aviso")) return;
     const texto = devNoticeText.value.trim();
     const imagemUrl = devNoticeImageBase64 || null;
     const ativo = devNoticeEnabled.checked;
@@ -1274,7 +1650,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         raffleWinnerName.style.color = "#4ade80";
         raffleWinnerName.textContent = winner.nome;
-        raffleWinnerDetails.textContent = `${winner.faixaEtaria} • ${winner.telefone}`;
+        raffleWinnerDetails.textContent = `${winner.faixaEtaria} • ${obterTelefone(winner) || winner.telefoneMascarado || ""}`;
 
         btnDrawRaffle.disabled = false;
         btnDrawRaffle.querySelector("span").textContent = "SORTEAR NOVAMENTE";
