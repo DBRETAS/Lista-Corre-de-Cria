@@ -703,6 +703,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return (priv && priv.ip) || p.ip || "";
   }
 
+  // Ações que dependem das regras exigem conta Google na coleção "admins"
   async function verificarAdminReal(uid) {
     try {
       const snap = await getDoc(doc(db, "admins", uid));
@@ -714,15 +715,6 @@ document.addEventListener("DOMContentLoaded", () => {
       
       isRealAdmin = false;
     }
-  }
-
-  // Ações que dependem das regras exigem conta Google na coleção "admins"
-  function exigirAdminReal(acao) {
-    if (currentUser && isRealAdmin) return true;
-    alert(
-      `Para ${acao}, entre no site com uma conta Google cadastrada na coleção "admins" do Firestore.`,
-    );
-    return false;
   }
 
 
