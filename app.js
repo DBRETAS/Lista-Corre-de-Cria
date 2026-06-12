@@ -706,9 +706,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Ações que dependem das regras exigem conta Google na coleção "admins"
   function exigirAdminReal(acao) {
     if (currentUser && isRealAdmin) return true;
-    alert(
-      `Para ${acao}, entre no site com uma conta Google cadastrada na coleção "admins" do Firestore.`,
-    );
+    const mensagem = `Para ${acao}, entre no site com uma conta Google cadastrada na coleção "admins" do Firestore.`;
+    console.error(mensagem);
+    alert(mensagem);
     return false;
   }
 
