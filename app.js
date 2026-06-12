@@ -704,17 +704,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Ações que dependem das regras exigem conta Google na coleção "admins"
-  async function verificarAdminReal(uid) {
-    try {
-      const snap = await getDoc(doc(db, "admins", uid));
-      isRealAdmin = snap.exists();
-    } catch (err) {
-      // ADICIONE ESTAS DUAS LINHAS ABAIXO:
-      console.error("⛔ ERRO AO LER ADMIN:", err);
-      console.log("MEU UID ATUAL É:", uid);
-      
-      isRealAdmin = false;
-    }
+  function exigirAdminReal(acao) {
+    if (currentUser && isRealAdmin) return true;
+    alert(
+      `Para ${acao}, entre no site com uma conta Google cadastrada na coleção "admins" do Firestore.`,
+    );
+    return false;
   }
 
 
