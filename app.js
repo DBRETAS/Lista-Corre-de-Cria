@@ -607,9 +607,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // A conta logada está na coleção "admins"? (é isso que as REGRAS checam)
   async function verificarAdminReal(uid) {
     try {
+      console.debug(`[verificarAdminReal] consultando admins/${uid}`);
       const snap = await getDoc(doc(db, "admins", uid));
       isRealAdmin = snap.exists();
+      console.debug(`[verificarAdminReal] resultado for ${uid}: isRealAdmin=${isRealAdmin}`);
     } catch (err) {
+      console.error(`[verificarAdminReal] erro ao consultar admins/${uid}:`, err);
       isRealAdmin = false;
     }
   }
@@ -706,10 +709,17 @@ document.addEventListener("DOMContentLoaded", () => {
   // Ações que dependem das regras exigem conta Google na coleção "admins"
   function exigirAdminReal(acao) {
     if (currentUser && isRealAdmin) return true;
-    alert(
-      `Para ${acao}, entre no site com uma conta Google cadastrada na coleção "admins" do Firestore.`,
-    );
+    const mensagem = `Para ${acao}, entre no site com uma conta Google cadastrada na coleção "admins" do Firestore.`;
+    alert(mensagem);
     return false;
+  }
+
+  // Expondo temporariamente para depuração via console (remova se preferir)
+  try {
+    // apenas se `window` existir (navegador)
+    if (typeof window !== "undefined") window.exigirAdminReal = exigirAdminReal;
+  } catch (e) {
+    /* ignore */
   }
 
 
