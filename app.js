@@ -707,9 +707,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function exigirAdminReal(acao) {
     if (currentUser && isRealAdmin) return true;
     const mensagem = `Para ${acao}, entre no site com uma conta Google cadastrada na coleção "admins" do Firestore.`;
-    console.error(mensagem);
-    alert(mensagem);
-    return false;
+    throw new Error(mensagem);
   }
 
   function validarNome(nome) {
